@@ -1,0 +1,75 @@
+/* The original layout/CSS is preserved. Only real media, source notes and forms gain styles. */
+body.modal-open{overflow:hidden}
+.source-link{color:var(--muted);text-decoration:none;font-size:.72rem!important;opacity:.65;overflow-wrap:anywhere;transition:opacity .2s}
+.source-link:hover,.source-link:focus-visible{opacity:1;text-decoration:underline}
+.lt-info .source-link{color:#D9BC85}
+.about figure figcaption a,figcaption a,[data-sources]{font-size:.72rem!important;opacity:.65;text-decoration:none}
+.about figure figcaption a:hover,figcaption a:hover,[data-sources]:hover,figcaption a:focus-visible,[data-sources]:focus-visible{opacity:1;text-decoration:underline}
+.memory-open{border:0;padding:0;background:transparent;width:100%;display:block;text-align:left;color:inherit;font:inherit;cursor:pointer}
+.memory-read-more{display:block;border:0;background:transparent;color:var(--gold-text);font-size:.86rem;padding:8px 24px 14px;min-height:44px;cursor:pointer;text-align:left}
+.memory-read-more:hover{text-decoration:underline}
+.memory-open:focus-visible,.memory-read-more:focus-visible{outline:2px solid var(--gold-text);outline-offset:-3px}
+.media-story{padding-bottom:10px;font-size:.9rem}
+.memory-attribution .source-link{font-size:.7rem!important}
+.background-music{position:fixed;bottom:20px;right:20px;width:min(340px,calc(100vw - 32px));z-index:45;background:#152336;color:#eee4d2;box-shadow:0 8px 35px #0004;border:1px solid #b99a6344;border-radius:5px;padding:8px 12px 10px}
+.background-music[hidden]{display:none}
+.music-heading{display:flex;align-items:center;justify-content:space-between;font-size:.85rem}
+.music-heading button{width:44px;height:44px;background:transparent;border:0;color:inherit;font-size:1.6rem;cursor:pointer}
+#music-frame iframe{width:100%;height:200px;border:0;display:block}
+.music-local{padding:22px 0;font-size:.9rem}
+.site-version{font-size:.7rem;color:var(--gold);opacity:.65;letter-spacing:.12em}
+.background-music .source-link{display:inline-block;color:#eee4d2;padding-top:7px}
+@media(max-width:560px){.background-music{bottom:12px;right:16px;width:280px}.memory-read-more{padding-inline:20px}}
+.career{margin-top:20px;border-top:1px solid var(--line);padding-top:16px}
+.career summary{cursor:pointer;font-family:var(--serif);font-size:1.05rem;color:var(--gold-text)}
+.career-grid{display:grid;gap:16px;margin-top:20px}
+.career-item{display:grid;grid-template-columns:84px 1fr;gap:14px;border-bottom:1px solid var(--line);padding-bottom:14px}
+.career-item time{font-size:.8rem;color:var(--gold-text)}
+.career-item h3{font-size:1rem;margin:0 0 5px}
+.career-item p{font-size:.9rem;line-height:1.9}
+.embed-wrap{width:100%;aspect-ratio:16/9;background:#080e18}
+.embed-wrap iframe{width:100%;height:100%;border:0;display:block}
+.external-video{position:relative;display:block;color:white;width:100%;text-align:center}
+.external-video img{display:block;width:100%}
+.external-video span{display:block;background:#172438;padding:16px;color:#ead8b5;line-height:1.6}
+.lt-stage .embed-wrap{min-width:0}
+.lt-stage video{display:block;width:100%;max-height:65vh}
+.lt-stage.text-stage{padding:36px;white-space:pre-line;color:#fff;font-family:var(--serif);line-height:2}
+.text-memory{display:block;padding:24px;white-space:pre-line;font-family:var(--serif);line-height:2}
+.ph video,.tile video{width:100%;height:100%;object-fit:cover}
+.lt-thumbs{display:flex;gap:8px;padding:12px;grid-column:1/-1;overflow:auto;background:#101a29}
+.lt-thumbs button{min-height:44px;min-width:70px;color:#fff;background:transparent;border:1px solid #8793a0}
+.lt-thumbs button[aria-pressed=true]{background:#c7a56b;color:#172438}
+.like-btn{min-width:44px;min-height:44px;display:inline-flex;gap:7px;align-items:center;justify-content:center}
+.like-btn[aria-pressed=true]{color:#e7c48b}
+.gallery img{object-fit:contain;background:var(--chip)}
+.file{grid-template-columns:52px minmax(0,1fr) auto}
+.media-remove{min-height:44px;background:transparent;border:0;color:var(--gold-text)}
+.form-error,.form-status{font-size:.86rem;padding:10px 12px;margin-block:12px;line-height:1.7}
+.form-error{color:var(--demo);background:var(--demo-bg)}
+.form-status{color:var(--gold-text)}
+.btn:disabled{opacity:.6;cursor:wait}
+.con-note{padding:16px;border:1px solid var(--line);margin-top:12px;white-space:pre-line}
+.con-note small{display:block;color:var(--muted)}
+.source-list p{padding:9px 0;border-bottom:1px solid var(--line)}
+.memory-types{margin-bottom:24px;width:fit-content;max-width:100%;flex-wrap:wrap}
+.simple-upload{max-width:560px;padding:30px}
+.simple-upload .lead{font-size:.95rem;margin-bottom:20px}
+.simple-upload .row{margin-bottom:15px}
+.simple-upload textarea{min-height:100px}
+.media-pick{position:relative;display:block!important;padding:20px;text-align:center;border:1px dashed var(--gold-text);border-radius:6px;background:var(--chip);cursor:pointer;color:var(--gold-text)}
+.media-pick .hint{display:block;font-weight:400;font-size:.8rem;margin-top:4px}
+.media-pick input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.media-pick:focus-within{outline:2px solid var(--gold-text);outline-offset:3px}
+.upload-extra{margin-bottom:16px}
+.upload-extra summary{font-size:.85rem;color:var(--muted);cursor:pointer;padding:8px 0}
+.upload-extra[open] summary{margin-bottom:12px}
+.upload-note{font-size:.78rem;color:var(--muted);margin:12px 0;line-height:1.6}
+.simple-upload .files:empty,.simple-upload .form-status:empty{display:none}
+.career-card{display:block;padding:24px;border:1px solid var(--line);background:var(--surface)}
+.career-card h3{margin:5px 0 12px;font-size:1.2rem}
+.career-card p{font-size:.95rem;line-height:1.9;margin-bottom:12px}
+.career-card .badge{margin:0}
+@media(max-width:560px){.simple-upload{padding:28px 20px}.simple-upload h2{font-size:1.35rem;padding-right:22px}.career-card{padding:20px}.year{overflow-wrap:anywhere}.memory-types button{padding-inline:13px}}
+@media(max-width:560px){.career-item{grid-template-columns:65px 1fr;gap:10px}.lt-stage .embed-wrap{min-height:210px}.source-link{font-size:.8rem}}
+
