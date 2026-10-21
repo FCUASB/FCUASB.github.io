@@ -72,4 +72,11 @@ body.modal-open{overflow:hidden}
 .career-card .badge{margin:0}
 @media(max-width:560px){.simple-upload{padding:28px 20px}.simple-upload h2{font-size:1.35rem;padding-right:22px}.career-card{padding:20px}.year{overflow-wrap:anywhere}.memory-types button{padding-inline:13px}}
 @media(max-width:560px){.career-item{grid-template-columns:65px 1fr;gap:10px}.lt-stage .embed-wrap{min-height:210px}.source-link{font-size:.8rem}}
-
+/* v1.1 fix: full-date timeline labels (e.g. 2026.10.17) split into year + month.day so they stay inside the 86px year column. */
+.year{overflow-wrap:anywhere}
+.year .year-main{display:block}
+.year .year-md{display:block;font-size:.95rem;font-weight:500;letter-spacing:.06em;color:var(--gold-text);line-height:1.5;margin-top:2px}
+@media(max-width:560px){.year .year-main,.year .year-md{display:inline}.year .year-md{margin-left:.35em}}
+/* v1.1 fix: the share-memory dialog matches its 560px form instead of the default 720px dialog, removing the empty right gutter. */
+#dlg-upload{width:min(560px,calc(100vw - 20px))}
+.simple-upload{max-width:none}

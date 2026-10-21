@@ -325,7 +325,14 @@ body.modal-open{overflow:hidden}
 .career-card .badge{margin:0}
 @media(max-width:560px){.simple-upload{padding:28px 20px}.simple-upload h2{font-size:1.35rem;padding-right:22px}.career-card{padding:20px}.year{overflow-wrap:anywhere}.memory-types button{padding-inline:13px}}
 @media(max-width:560px){.career-item{grid-template-columns:65px 1fr;gap:10px}.lt-stage .embed-wrap{min-height:210px}.source-link{font-size:.8rem}}
-
+/* v1.1 fix: full-date timeline labels (e.g. 2026.10.17) split into year + month.day so they stay inside the 86px year column. */
+.year{overflow-wrap:anywhere}
+.year .year-main{display:block}
+.year .year-md{display:block;font-size:.95rem;font-weight:500;letter-spacing:.06em;color:var(--gold-text);line-height:1.5;margin-top:2px}
+@media(max-width:560px){.year .year-main,.year .year-md{display:inline}.year .year-md{margin-left:.35em}}
+/* v1.1 fix: the share-memory dialog matches its 560px form instead of the default 720px dialog, removing the empty right gutter. */
+#dlg-upload{width:min(560px,calc(100vw - 20px))}
+.simple-upload{max-width:none}
 
 </style>
 </head>
@@ -640,6 +647,7 @@ function showConcert(id){const c=CON.find(x=>x.id===id);if(!c)return;J.view='con
  ${(c.videoIds?.length||c.externalVideo)?`<h3 class="sub-h">演出影片</h3>${(c.videoIds||[]).map(y=>videoPlayer({youtube:y,title:c.title})).join('')}${c.externalVideo?videoPlayer({...c,src:c.poster}):''}`:''}<h3 class="sub-h">這場音樂會，你最難忘的是什麼？</h3>${c.notes?.length?c.notes.map(n=>`<div class="con-note">${esc(n.text)}<small>— ${esc(n.author)}</small></div>`).join(''):'<p class="hint">把你記得的排練、舞台與相遇，留在這裡。</p>'}`;scrollTo({top:$('#journey').offsetTop,behavior:'instant'});
 }
 function renderCareer(){const el=$('#careerBody');if(el)el.innerHTML=ARCHIVE.career.map(r=>`<article class="career-item"><time>${esc(r.label)}</time><div><h3>${esc(r.title)}</h3><p>${esc(r.description)}</p>${sourceLink(r.source,'資料來源')}</div></article>`).join('')}
+function yearLabel(label){const m=/^(\d{4})\.(\d{1,2}\.\d{1,2})$/.exec(label);return m?`<span class="year-main">${m[1]}</span> <span class="year-md">${m[2]}</span>`:esc(label)}
 function renderJ(){
  if(J.tab!=='timeline'){renderWorksOriginal();return}
  const q=J.q.trim().toLowerCase();
@@ -647,7 +655,7 @@ function renderJ(){
  const career=J.flt==='all'?ARCHIVE.career.filter(r=>!q||[r.label,r.title,r.description].join(' ').toLowerCase().includes(q)).map(r=>({group:r.label,order:r.timelineOrder,html:`<article class="career-card"><span class="badge">音樂生涯</span><h3>${esc(r.title)}</h3><p>${esc(r.description)}</p>${sourceLink(r.source,'資料來源')}</article>`})):[];
  const entries=[...career,...events].sort((a,b)=>J.dir==='asc'?a.order-b.order:b.order-a.order);
  const groups=[];for(const item of entries){let group=groups.at(-1);if(!group||group.label!==item.group)groups.push(group={label:item.group,items:[]});group.items.push(item.html)}
- $('#jBody').innerHTML=entries.length?'<div class="timeline">'+groups.map(g=>`<div class="year-block"><div class="year">${esc(g.label)}</div><div class="cards">${g.items.join('')}</div></div>`).join('')+'</div>':'<p class="empty">沒有符合的足跡，換個關鍵字試試。</p>';
+ $('#jBody').innerHTML=entries.length?'<div class="timeline">'+groups.map(g=>`<div class="year-block"><div class="year">${yearLabel(g.label)}</div><div class="cards">${g.items.join('')}</div></div>`).join('')+'</div>':'<p class="empty">沒有符合的足跡，換個關鍵字試試。</p>';
 }
 function showSources(){const dialog=$('#dlg-sources');dialog.innerHTML=`<div class="dlg">${closeX}<h2>資料與影像來源</h2><p class="lead">更新於 ${esc(ARCHIVE.updated)}。公開演出紀錄由本網站整理，照片及影片權利歸原作者與相關單位所有。</p><div class="source-list">${[...new Set(Object.values(ARCHIVE.sources))].map(url=>{const c=CON.find(x=>x.source===url),m=MEM.find(x=>x.source===url);return `<p>${sourceLink(url,c?c.sourceName+'｜'+c.title:m?m.sourceName:new URL(url).hostname)}</p>`}).join('')}</div><p class="hint">生平與演出紀錄可持續校訂；目前收錄範圍不代表老師完整演出總數。</p></div>`;dialog.showModal();syncModalState()}
 document.addEventListener('click',e=>{if(e.target.closest('[data-sources]'))showSources();const b=e.target.closest('[data-expand-memory]');if(b){const id=Number(b.dataset.expandMemory);expandedMemories.has(id)?expandedMemories.delete(id):expandedMemories.add(id);const m=MEM.find(m=>m.id===id),excerpt=memoryExcerpt(m);document.getElementById('memory-story-'+id).textContent=excerpt.text;b.textContent=excerpt.expanded?'收起文字':'閱讀剩下'+excerpt.remaining+'字';b.setAttribute('aria-expanded',String(excerpt.expanded))}});
