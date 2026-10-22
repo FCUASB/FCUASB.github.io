@@ -1,0 +1,14 @@
+{
+  "name": "dalu-music-memorial",
+  "version": "1.1.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=24 <25" },
+  "scripts": {
+    "serve": "node scripts/serve.mjs",
+    "start": "node scripts/serve.mjs",
+    "build": "node scripts/project.mjs build",
+    "check": "node scripts/project.mjs check",
+    "proofread": "node scripts/project.mjs proofread"
+  }
+}

@@ -3,7 +3,7 @@ import path from 'node:path';
 import vm from 'node:vm';
 import {fileURLToPath} from 'node:url';
 const dir=path.dirname(fileURLToPath(import.meta.url));
-const read=name=>fs.readFileSync(path.join(dir,name),'utf8');
+const read=name=>fs.readFileSync(path.join(dir,name),'utf8').replace(/\r\n/g,'\n');
 const originalHTML=read('template-original.html');
 const data=JSON.parse(read('content.json'));
 const assets=Object.fromEntries(JSON.parse(read('assets.json')).filter(a=>!a.error).map(a=>[a.key,{...a,url:'data:image/jpeg;base64,'+fs.readFileSync(path.join(dir,a.path)).toString('base64')}]));

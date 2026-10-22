@@ -1,5 +1,7 @@
 # v1.1 工程原始碼
 
+日常維護請優先在 repository 根目錄執行 `npm run build`、`npm run check`；內容變更另執行 `npm run proofread`。根目錄命令會同步發布／校對副本，下面的原始腳本只操作工程目錄。規則見根目錄 AGENTS.md 及 docs/MAINTENANCE.md。
+
 需 Node.js，無需安裝套件。在此資料夾執行：
 
 ```sh

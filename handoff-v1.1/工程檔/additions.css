@@ -80,3 +80,16 @@ body.modal-open{overflow:hidden}
 /* v1.1 fix: the share-memory dialog matches its 560px form instead of the default 720px dialog, removing the empty right gutter. */
 #dlg-upload{width:min(560px,calc(100vw - 20px))}
 .simple-upload{max-width:none}
+/* Keep intrinsic photo proportions when HTML width/height attributes are present. */
+.about figure img{height:auto}
+.detail-top .poster{height:auto;aspect-ratio:auto;object-fit:contain}
+.lt-stage img{width:auto;height:auto;object-fit:contain}
+.detail-top>*,.card>*,.career-item>*,.dl dd{min-width:0}
+.card h3,.detail-top h2,.dl dd,.lt-info,.file .name{overflow-wrap:anywhere}
+.gallery figure{min-width:0}
+@media(max-width:560px){
+  .nav{width:100%;justify-content:space-between;gap:0}
+  .nav a,.nav button{padding-inline:8px;font-size:.85rem}
+  .dl{grid-template-columns:5em minmax(0,1fr);gap:6px 10px}
+  .lt-stage img{max-height:60dvh}
+}
