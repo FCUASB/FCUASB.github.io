@@ -4,6 +4,8 @@
 
 ## 維護入口
 
+委託人、內容校對者與非程式人員可先讀 [網站規格書](docs/SPECIFICATION.md)，了解目前功能、已決定方向、限制及待確認事項。
+
 AI Agent 與工程師先讀 [AGENTS.md](AGENTS.md) 與 [長期維護手冊](docs/MAINTENANCE.md)。原《AI接手說明 v1.0》保留為歷史背景，其中首頁位置已由提交 `3b55be9` 更新，以目前程式與上述文件為準。
 
 使用 Node.js 24 LTS，無需安裝套件：
