@@ -1,34 +1,21 @@
-# 大呂的音樂，未完待續
+# 大呂的音樂，未完待續 v1.1
 
-呂彥慶老師紀念網站的**靜態互動展示原型**，使用原生 HTML、CSS 與 JavaScript，可部署於 GitHub Pages，無需安裝 npm 套件。
+網站根目錄的 `index.html` 使用 `handoff-v1.1/index.html`，作為 https://fcuasb.github.io/ 的首頁。照片已嵌入 HTML。
 
 ## 本機預覽
-
-在專案目錄執行：
 
 ```powershell
 python -m http.server 8000
 ```
 
-開啟 http://localhost:8000 。
+開啟 http://localhost:8000 。字型、YouTube 與外部來源需要網路連線。
 
-## 網站內容
+## GitHub Pages
 
-- `index.html`：首頁、回憶照片牆、音樂足跡、音樂會及曲目檢視、模擬投稿表單。
-- `theme.css`：延伸 REFF 的色彩設計，以及配色設定面板。
-- `theme.js`：主題切換、跟隨系統深淺色、自訂點綴色與本機儲存。
-- `REFF/`：設計參考原稿，保留不變。
+將變更推送到 `main`，並在 Settings → Pages 選擇 Deploy from a branch → main → /(root)。根目錄 `.nojekyll` 讓 GitHub Pages 直接提供靜態檔案。
 
-### 配色
+## 更新內容
 
-頁首右側「配色」開啟切換面板，提供跟隨系統、典藏紙色、象牙年鑑、夜空展廳、樂譜長卷，以及自訂點綴色。設定保留在本機瀏覽器的 localStorage，不會傳送至伺服器。「恢復跟隨系統配色」可清除自訂色。
+編輯 `handoff-v1.1/工程檔/content.json`，於該目錄執行 `node build.mjs`，將輸出的 `dist/index.html` 同步到 `handoff-v1.1/index.html` 與根目錄 `index.html`。
 
-## 展示限制
-
-目前照片、音樂會、統計與內容屬示範資料，投稿與回報表單**不會儲存、傳送或公開內容**。真正啟用前需要決定管理權、資料保護、同意與下架流程，並配置資料庫／檔案儲存與防濫用機制。
-
-## 參考來源
-
-原始互動設計：`REFF/大呂的音樂，未完待續/大呂的音樂，未完待續.html`
-
-風格比較：`REFF/大呂的音樂，未完待續/風格方案.dc.html`
+完整功能說明、資料來源、人工校對與已知限制見 [handoff-v1.1/README.md](handoff-v1.1/README.md)。投稿保存在訪客自己的瀏覽器 IndexedDB，尚未連接共用收件後台。
