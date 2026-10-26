@@ -2,7 +2,16 @@
   "name": "dalu-acceptance-build",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=24 <25" },
-  "scripts": { "build": "node build.mjs", "check": "node build.mjs --check" },
-  "dependencies": { "@supabase/supabase-js": "2.118.0", "esbuild": "0.28.2" }
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "scripts": {
+    "build": "node build.mjs",
+    "check": "node build.mjs --check",
+    "test": "node --test ../../scripts/acceptance-sync.test.mjs ../../scripts/cloud-client.test.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "2.118.0",
+    "esbuild": "0.28.2"
+  }
 }

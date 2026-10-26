@@ -1,10 +1,10 @@
 // Generated from the shared cloud client and acceptance/src/app.js.
 /* New cloud submissions only. Never reads or migrates IndexedDB records. */
 const ProjectCloud=(()=>{
- let challengeScript;
+ let challengeScript,refreshVersion=0,recordsFingerprint;
  const enabled=()=>CLOUD_CONFIG.enabled===true;
  async function request(endpoint,body){
-  const response=await fetch(endpoint,{method:body?'POST':'GET',credentials:'omit',redirect:'error',headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined,signal:AbortSignal.timeout(25000)});
+  const response=await fetch(endpoint,{method:body?'POST':'GET',credentials:'omit',redirect:'error',cache:'no-store',headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined,signal:AbortSignal.timeout(25000)});
   const data=await response.json();
   if(!response.ok){const messages={CHALLENGE_FAILED:'驗證已失效，請重新完成驗證後再送出。',RATE_LIMITED:'目前投稿較多，請稍後再試；填寫內容仍保留。',FILE_TOO_LARGE:'附件超過目前雲端單檔限制，請改貼 YouTube 連結或移除該附件。',INVALID_IDEMPOTENCY_KEY:'收件識別資料錯誤，請重新開啟表單。',INTAKE_NOT_READY:'雲端收件尚未啟用，內容尚未送出。'};throw new Error(messages[data.error]||'未確認雲端收件成功，內容仍保留，請稍後重試。')}
   return data;
@@ -32,8 +32,11 @@ const ProjectCloud=(()=>{
  }
  async function refresh(){
   if(!enabled())return;
+  const current=++refreshVersion;
   const records=[];let next=null;const seen=new Set();do{const query=next?'?'+new URLSearchParams(next):'';const page=await request(CLOUD_CONFIG.intakeEndpoint+query);if(!Array.isArray(page.records))throw Error('無法讀取雲端列表。');records.push(...page.records);next=page.next;if(next){const cursor=JSON.stringify(next);if(seen.has(cursor))throw Error('雲端列表分頁錯誤。');seen.add(cursor)}}while(next);
-  const hydrated=records.map(hydrate);for(let i=MEM.length-1;i>=0;i--)if(MEM[i].cloud)MEM.splice(i,1);
+  if(current!==refreshVersion)return;
+  const fingerprint=JSON.stringify(records);if(fingerprint===recordsFingerprint)return;
+  const hydrated=records.map(hydrate);recordsFingerprint=fingerprint;for(let i=MEM.length-1;i>=0;i--)if(MEM[i].cloud)MEM.splice(i,1);
   MEM.push(...hydrated);mem.order=null;renderMem();buildWall(true);
  }
  function fileMime(item){const file=item.original||item.blob;if(file.type)return file.type;const ext=item.name.split('.').pop().toLowerCase();return ({jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',gif:'image/gif',webp:'image/webp',heic:'image/heic',heif:'image/heif',mp4:'video/mp4',mov:'video/quicktime',webm:'video/webm'})[ext]||''}
@@ -70,8 +73,30 @@ const ProjectCloud=(()=>{
  return {enabled,fields,attach,dispose,refresh,submit,prepareFile};
 })();
 
+// One in-flight read, visible pages only; failed reads never claim freshness.
+function createAcceptanceSync({ read, notify, active = () => true, intervalMs = 10000,
+  setTimer = setTimeout, clearTimer = clearTimeout, now = () => new Date().toISOString() }) {
+  let timer, pending, stopped = false, lastSuccess = null;
+  function schedule() {
+    if (stopped) return;
+    timer = setTimer(() => { timer = null; if (active()) void refresh(); else schedule(); }, intervalMs);
+  }
+  function refresh() {
+    if (stopped) return Promise.resolve();
+    if (pending) return pending;
+    if (timer != null) { clearTimer(timer); timer = null; }
+    notify({ state: 'loading', lastSuccess });
+    pending = Promise.resolve().then(read).then(() => {
+      if (!stopped) { lastSuccess = now(); notify({ state: 'ready', lastSuccess }); }
+    }, () => { if (!stopped) notify({ state: 'failed', lastSuccess }); })
+      .finally(() => { pending = null; schedule(); });
+    return pending;
+  }
+  return { refresh, stop() { stopped = true; if (timer != null) clearTimer(timer); } };
+}
+
 // Bundled after the same cloud client used by the main website. No IndexedDB access.
-let CLOUD_CONFIG;
+let CLOUD_CONFIG, liveSync;
 const acceptedOrigin = location.origin === 'https://dalu.tw';
 const MEM = [], mem = {};
 const $ = (selector, root = document) => root.querySelector(selector);
@@ -109,7 +134,7 @@ async function start() {
     const result = await fetch(CLOUD_CONFIG.intakeEndpoint, { credentials: 'omit', redirect: 'error', signal: AbortSignal.timeout(15000) });
     $('#status').textContent = `收件端點 HTTP ${result.status}。` + (result.status === 401 ? '平台仍要求 JWT，匿名投稿尚不可用。' : result.status === 503 ? '後端尚未啟用。' : '此結果只代表端點回應，仍須送出測試。');
   });
-  $('#refresh').onclick = () => run(async () => { if (!acceptedOrigin || !ProjectCloud.enabled()) throw Error('請先發布並開啟 https://dalu.tw/acceptance/ 驗收。'); await ProjectCloud.refresh(); $('#status').textContent = '已重新讀取雲端；請核對收件編號。'; });
+  $('#refresh').onclick = () => run(async () => { if (!acceptedOrigin || !ProjectCloud.enabled()) throw Error('請先發布並開啟 https://dalu.tw/acceptance/ 驗收。'); await liveSync.refresh(); });
   $('#up-files').onchange = () => run(async () => {
     const files = [...$('#up-files').files]; form._media.items = []; $('#files').replaceChildren(); if (files.length > 10) throw Error('最多選擇 10 個附件。');
     const items = []; $('#send').disabled = true; $('#new-test').disabled = true; $('#up-files').disabled = true;
@@ -123,9 +148,22 @@ async function start() {
     if (!formValue(form, 'up-name').startsWith('驗收')) throw Error('測試署名請以「驗收」開頭，方便後續辨識。');
     if (!formValue(form, 'up-story') && !formValue(form, 'up-youtube') && !form._media.items.length) throw Error('請填寫文字或選擇附件。');
     $('#submission-fields').disabled = true; $('#form-error').textContent = '';
-    try { const result = await ProjectCloud.submit(form); $('#receipt').textContent = result.title + '\n' + result.message; }
+    try { const result = await ProjectCloud.submit(form); $('#receipt').textContent = result.title + '\n' + result.message; $('[data-file-status]', form).textContent = ''; await liveSync.refresh(); }
     finally { $('#submission-fields').disabled = false; }
   }); };
-  if (acceptedOrigin && ProjectCloud.enabled()) { await ProjectCloud.attach(form); await ProjectCloud.refresh(); }
+  if (acceptedOrigin && ProjectCloud.enabled()) {
+    liveSync = createAcceptanceSync({ read: () => ProjectCloud.refresh(), active: () => !document.hidden,
+      notify: ({ state, lastSuccess }) => {
+        const time = lastSuccess ? new Date(lastSuccess).toLocaleTimeString('zh-TW') : '尚無';
+        $('#sync-status').textContent = state === 'failed' ? `同步失敗，目前可能是舊資料；上次成功：${time}。請稍後重試。`
+          : state === 'loading' ? `正在同步雲端列表；上次成功：${time}。`
+          : `最後同步：${time}。每 10 秒更新；下架後會從公開列表移除。`;
+      } });
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) void liveSync.refresh(); });
+    window.addEventListener('focus', () => void liveSync.refresh());
+    window.addEventListener('pagehide', event => { if (!event.persisted) liveSync.stop(); });
+    // A slow challenge script must not block public list refresh.
+    void ProjectCloud.attach(form); await liveSync.refresh();
+  }
 }
 run(start);
