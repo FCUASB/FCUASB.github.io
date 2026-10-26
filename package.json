@@ -12,6 +12,12 @@
     "build": "node scripts/project.mjs build",
     "check": "node scripts/project.mjs check",
     "proofread": "node scripts/project.mjs proofread",
-    "test:home": "node --test scripts/home-cloud.test.mjs scripts/cloud-client.test.mjs scripts/acceptance-sync.test.mjs"
+    "test:home": "node --test scripts/home-cloud.test.mjs scripts/cloud-client.test.mjs scripts/acceptance-sync.test.mjs",
+    "test:catalog": "node --test scripts/catalog.test.mjs scripts/catalog-client.test.mjs scripts/catalog-ui.test.mjs scripts/admin-client.test.mjs",
+    "prepare:catalog": "node scripts/prepare-catalog.mjs",
+    "check:catalog": "node scripts/prepare-catalog.mjs --check"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.11"
   }
 }

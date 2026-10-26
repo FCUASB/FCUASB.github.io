@@ -4,7 +4,7 @@ async function startHomepageCloud(){
  const status=$('#cloud-sync-status');
  const sync=createAcceptanceSync({active:()=>!document.hidden,read:async()=>{
   const previous=MEM.find(m=>m.id===ltId&&m.cloud);
-  await ProjectCloud.refresh();
+  await Promise.all([ProjectCloud.refresh(),...(typeof ProjectCatalog==='undefined'?[]:[ProjectCatalog.refresh()])]);
   storageState.albumIds=storageState.albumIds.filter(id=>MEM.some(m=>m.id===id));
   if(previous&&lt.open){const current=MEM.find(m=>m.id===previous.id);if(!current){lt.close();toast('這則投稿已下架。')}else if(JSON.stringify(previous)!==JSON.stringify(current))drawLight()}
  },notify:({state,lastSuccess})=>{

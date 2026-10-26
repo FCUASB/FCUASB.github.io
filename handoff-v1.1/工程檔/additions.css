@@ -97,3 +97,5 @@ body.modal-open{overflow:hidden}
 
 .cloud-sync{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:0 0 20px}.cloud-sync p{font-size:.85rem;color:var(--muted);margin:0}
 form input[type=email],form input[type=tel],form input[type=url]{font:inherit;font-size:16px;width:100%;min-width:0;min-height:46px;padding:10px 12px;border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:2px}.simple-upload [data-challenge]{min-width:0}
+
+.catalog-status{max-width:1080px;margin:12px auto;padding:0 20px;font-size:.85rem}.catalog-pending #catalog-biography,.catalog-pending #catalog-biography-more,.catalog-pending #careerBody,.catalog-pending #jBody,.catalog-pending #jDetail,.catalog-pending #stats,.catalog-pending #previewCards{display:none!important}

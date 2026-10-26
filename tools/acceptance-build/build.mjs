@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 const root = new URL('../../', import.meta.url);
 const check = process.argv.includes('--check');
 process.chdir(fileURLToPath(root));
-const result = await build({ absWorkingDir: fileURLToPath(root), entryPoints: ['admin/src/app.js'], bundle: true, minify: true, format: 'esm', target: 'es2022',
+const result = await build({ absWorkingDir: fileURLToPath(root), entryPoints: ['admin/src/app.js'], bundle: true, minify: true, format: 'esm', target: 'es2022', supported: { 'template-literal': false },
   alias: { '@supabase/supabase-js': fileURLToPath(import.meta.resolve('@supabase/supabase-js')) },
   outfile: 'admin/app.js', write: false, legalComments: 'inline' });
 const outputs = result.outputFiles.map(output => ({ path: output.path, text: output.text }));
