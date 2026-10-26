@@ -1,6 +1,6 @@
 # 音樂會與大呂生平管理
 
-狀態：本機完成，等待這批遠端設定與發布授權。正式網站目前仍是 PR #9。
+2026-10-26：本批已獲授權；SQL 與 catalog API 已接通。此前端版本發布後提供分區管理，實際 Pages 與回驗狀態見本批 PR 記錄。
 
 ## 分區與權限
 
@@ -22,7 +22,7 @@ prepare:catalog 由 content.json 生成單一 transaction 的 catalog-setup.sql�
 
 supabase/setup/foundation.sql、intake-api.sql、admin-api.sql 及既有 backend helper 這次納入 repository 供依賴與本機測試；不是此次要重新套用的 SQL。遠端只套用新的 catalog-setup.sql。
 
-## 部署順序（需當次授權）
+## 部署順序（本批已授權）
 
 1. 先只讀確認 Supabase 專案 rikgchswpjaxlnhdrxtw 及同名物件尚不存在。備份現況，確認既有兩位管理員仍有現行角色；這批不增加管理員或調整角色。
 2. 核對 npm run check:catalog 通過後，套用 supabase/deploy/catalog-setup.sql，檢查 43 筆資料、RLS、RPC 權限。
@@ -30,7 +30,7 @@ supabase/setup/foundation.sql、intake-api.sql、admin-api.sql 及既有 backend
 4. 設定 CATALOG_ENABLED=true（不新增秘密值），確認公開 GET 的資料及未登入 POST 的拒絕結果；不通過就停止前端發布。
 5. 推送獨立分支、PR，CI 通過後依授權合併；Pages 成功後再驗證後台登入、42 場音樂會、21 筆生涯事件、儲存、跨瀏覽器與軟下架／恢復。只以清楚標記的合成資料測試，不修改真實生平事實。
 
-前端與 admin/config.json 的 catalogEnabled 只在上述服務可用後發布。本機目前已準備 true 的發布檔，但未上傳。
+前端與 admin/config.json 的 catalogEnabled 只在上述服務可用後發布。本批已完成後端核對，目錄開關隨前端提交啟用。
 
 ## 網站同步與維護
 
@@ -49,6 +49,6 @@ content.json 保留匯入基準；啟用後，這兩個分區以雲端內容為�
 - test:home 8 項及獨立前端建置一致性檢查通過；新函式 Deno check 通過。
 - HTTP 本機模擬 API 預覽：42 筆搜尋、音樂會編輯儲存、生平介紹與 21 筆生涯事件編輯儲存。360、390、430、1280px 兩種編輯彈窗無水平溢出。這不是正式後端驗收。
 
-Supabase 連接器目前回覆無權限，遠端 SQL、函式與網站均未改動。遠端 advisors、完整瀏覽器端雲端驗收、Drive、passkey、200 人負載及影片實傳仍未完成。
+Supabase 連接器目前回覆無權限，本批使用已登入的校友團 Dashboard 套用與核對。遠端已確認兩張私有表啟用 RLS、42 場音樂會與 21 筆生涯、anon/authenticated 不可直接讀表或執行 RPC，公開 GET 200、未登入 POST 401 LOGIN_REQUIRED。catalog 函式已部署，僅此新函式 Verify JWT 關閉，CATALOG_ENABLED=true。前端與管理員操作的遠端回驗待 Pages 部署後記錄於 PR；遠端 advisors、Drive、passkey、200 人負載及影片實傳仍未完成。
 
 參考：[Supabase functions](https://supabase.com/docs/guides/database/functions)、[RLS](https://supabase.com/docs/guides/database/postgres/row-level-security)。

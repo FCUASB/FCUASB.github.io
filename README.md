@@ -28,4 +28,4 @@ python -m http.server 8000
 
 ## 音樂會與大呂生平管理
 
-本分支已準備後台分區、雲端內容版本與同步；尚未套用資料庫或發布。接續操作與驗證限制見 [管理與部署說明](docs/CATALOG-MANAGEMENT.md)。
+音樂會與生平的資料庫及 catalog API 已接通；本批前端發布後提供後台分區、雲端內容版本與同步。接續操作與驗證限制見 [管理與部署說明](docs/CATALOG-MANAGEMENT.md)。
