@@ -4,9 +4,9 @@
 
 ## 維護入口
 
-連線與資料接口見 [接入說明](docs/CONNECTION.md)。目前仍使用本機 IndexedDB；通用 HTTP 客戶端尚未啟用。
+連線與資料接口見 [接入說明](docs/CONNECTION.md)。正式首頁已接通 Supabase 新回憶投稿；舊瀏覽器 IndexedDB 不會自動上傳。補充、檢舉及訪客新增音樂會仍使用本機流程。
 
-Supabase 專案、GCP Drive API、服務帳號及 OAuth 準備步驟見 [雲端設定指南](docs/CLOUD-SETUP.md)。文件記錄規劃及待確認項目，不代表已接上雲端收件。
+Supabase 專案、GCP Drive API、服務帳號及 OAuth 準備步驟見 [雲端設定指南](docs/CLOUD-SETUP.md)。歷史設定文件需搭配 [最新進度](docs/CLOUD-PROGRESS.md) 閱讀。
 
 委託人、內容校對者與非程式人員可先讀 [網站規格書](docs/SPECIFICATION.md)，了解目前功能、已決定方向、限制及待確認事項。
 
@@ -19,7 +19,7 @@ npm run build
 npm run check
 ```
 
-雲端開發另執行 `npm run test:cloud`、`npm run check:edge`；後台來源更新後執行 `npm run build:admin`、`npm run check:admin`。首頁雲端設定保持停用；獨立驗收頁與後台設定已準備啟用但尚未發布，實際狀態與接續步驟見 [部署清單](docs/CLOUD-DEPLOYMENT.md)，不能將本機程式已建置視為正式收件已上線。
+雲端開發另執行 `npm run test:cloud`、`npm run check:edge`；後台來源更新後執行 `npm run build:admin`、`npm run check:admin`。正式首頁、獨立驗收頁及管理後台已發布；音樂會、生平與原有公開回憶已納入後台管理。Drive worker 與 passkey 尚未正式啟用，實際狀態與接續步驟見 [部署清單](docs/CLOUD-DEPLOYMENT.md)，不能將本機程式已建置視為正式收件已上線。
 
 `build` 建置、驗證並同步兩份發布 HTML；`check` 檢查發布檔與來源一致。內容修改另執行 `npm run proofread` 並人工核對 CSV。PR 自動執行一致性檢查，畫面與互動仍需人工驗收。
 
@@ -41,7 +41,7 @@ npm run serve
 
 編輯 `handoff-v1.1/工程檔/content.json`，在根目錄執行 `npm run build`，提交來源與同步後的兩份 `index.html`。不要直接手改發布 HTML。
 
-完整功能說明、資料來源、人工校對與已知限制見 [handoff-v1.1/README.md](handoff-v1.1/README.md)。投稿保存在訪客自己的瀏覽器 IndexedDB，尚未連接共用收件後台。
+完整功能說明、資料來源、人工校對與已知限制見 [handoff-v1.1/README.md](handoff-v1.1/README.md)。新回憶使用雲端收件；既有瀏覽器本機內容保留在原瀏覽器，不會自動搬移。
 
 
 ## 首頁雲端接入
