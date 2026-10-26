@@ -4,16 +4,22 @@
 
 ## 維護入口
 
+連線與資料接口見 [接入說明](docs/CONNECTION.md)。目前仍使用本機 IndexedDB；通用 HTTP 客戶端尚未啟用。
+
+Supabase 專案、GCP Drive API、服務帳號及 OAuth 準備步驟見 [雲端設定指南](docs/CLOUD-SETUP.md)。文件記錄規劃及待確認項目，不代表已接上雲端收件。
+
 委託人、內容校對者與非程式人員可先讀 [網站規格書](docs/SPECIFICATION.md)，了解目前功能、已決定方向、限制及待確認事項。
 
 AI Agent 與工程師先讀 [AGENTS.md](AGENTS.md) 與 [長期維護手冊](docs/MAINTENANCE.md)。原《AI接手說明 v1.0》保留為歷史背景，其中首頁位置已由提交 `3b55be9` 更新，以目前程式與上述文件為準。
 
-使用 Node.js 24 LTS，無需安裝套件：
+使用 Node.js 24 LTS。原網站建置本身不需第三方套件；管理後台、雲端型別檢查與資料庫測試需先執行 `npm ci`：
 
 ```sh
 npm run build
 npm run check
 ```
+
+雲端開發另執行 `npm run test:cloud`、`npm run check:edge`；後台來源更新後執行 `npm run build:admin`、`npm run check:admin`。首頁雲端設定保持停用；獨立驗收頁與後台設定已準備啟用但尚未發布，實際狀態與接續步驟見 [部署清單](docs/CLOUD-DEPLOYMENT.md)，不能將本機程式已建置視為正式收件已上線。
 
 `build` 建置、驗證並同步兩份發布 HTML；`check` 檢查發布檔與來源一致。內容修改另執行 `npm run proofread` 並人工核對 CSV。PR 自動執行一致性檢查，畫面與互動仍需人工驗收。
 

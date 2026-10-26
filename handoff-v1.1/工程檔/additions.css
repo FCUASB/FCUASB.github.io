@@ -10,7 +10,10 @@ body.modal-open{overflow:hidden}
 .memory-read-more:hover{text-decoration:underline}
 .memory-open:focus-visible,.memory-read-more:focus-visible{outline:2px solid var(--gold-text);outline-offset:-3px}
 .media-story{padding-bottom:10px;font-size:.9rem}
-.memory-attribution .source-link{font-size:.7rem!important}
+.memory-heading{padding:20px 24px 16px;border-bottom:1px solid var(--line)}
+.memory-heading h3{margin:0 0 6px;font-family:var(--serif);font-size:1.1rem;font-weight:600;line-height:1.6;color:var(--gold-text);overflow-wrap:anywhere}
+.memory-attribution{font-size:.8rem;color:var(--muted);line-height:1.7;overflow-wrap:anywhere}
+.memory-attribution .source-link{font-size:.8rem!important;opacity:1}
 .background-music{position:fixed;bottom:20px;right:20px;width:min(340px,calc(100vw - 32px));z-index:45;background:#152336;color:#eee4d2;box-shadow:0 8px 35px #0004;border:1px solid #b99a6344;border-radius:5px;padding:8px 12px 10px}
 .background-music[hidden]{display:none}
 .music-heading{display:flex;align-items:center;justify-content:space-between;font-size:.85rem}
@@ -35,7 +38,8 @@ body.modal-open{overflow:hidden}
 .lt-stage .embed-wrap{min-width:0}
 .lt-stage video{display:block;width:100%;max-height:65vh}
 .lt-stage.text-stage{padding:36px;white-space:pre-line;color:#fff;font-family:var(--serif);line-height:2}
-.text-memory{display:block;padding:24px;white-space:pre-line;font-family:var(--serif);line-height:2}
+.text-memory{display:block;padding:20px 24px;white-space:pre-line;font-family:var(--sans);font-size:1rem;line-height:1.9;color:var(--fg);overflow-wrap:anywhere}
+@media(max-width:560px){.memory-heading{padding:18px 20px 14px}.text-memory{padding:18px 20px}}
 .ph video,.tile video{width:100%;height:100%;object-fit:cover}
 .lt-thumbs{display:flex;gap:8px;padding:12px;grid-column:1/-1;overflow:auto;background:#101a29}
 .lt-thumbs button{min-height:44px;min-width:70px;color:#fff;background:transparent;border:1px solid #8793a0}
@@ -93,3 +97,6 @@ body.modal-open{overflow:hidden}
   .dl{grid-template-columns:5em minmax(0,1fr);gap:6px 10px}
   .lt-stage img{max-height:60dvh}
 }
+
+.cloud-sync{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:0 0 20px}.cloud-sync p{font-size:.85rem;color:var(--muted);margin:0}
+form input[type=email],form input[type=tel],form input[type=url]{font:inherit;font-size:16px;width:100%;min-width:0;min-height:46px;padding:10px 12px;border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:2px}.simple-upload [data-challenge]{min-width:0}
