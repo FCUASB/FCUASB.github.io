@@ -1,0 +1,9 @@
+{
+  "enabled": true,
+  "supabaseUrl": "https://rikgchswpjaxlnhdrxtw.supabase.co",
+  "publishableKey": "sb_publishable_iu6yRsUzA8DZJjlPzg7FMQ_129X3mSd",
+  "adminEndpoint": "https://rikgchswpjaxlnhdrxtw.supabase.co/functions/v1/admin",
+  "mediaEndpoint": "https://rikgchswpjaxlnhdrxtw.supabase.co/functions/v1/media",
+  "passkeysEnabled": false,
+  "auditEnabled": false
+}

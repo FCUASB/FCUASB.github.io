@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow"><meta name="referrer" content="no-referrer">
+<title>大呂網站｜雲端功能驗收</title><link rel="stylesheet" href="./style.css"><script defer src="./app.js"></script></head>
+<body><main><h1>雲端上傳與管理驗收</h1>
+<p>本頁直接使用校友團 Supabase。測試投稿視為公開，只使用合成文字與測試素材，不填個人資料。這是獨立測試入口，首頁功能開關不受本頁影響。</p>
+<p id="status" role="status" aria-live="polite">正在讀取設定……</p>
+<nav><button id="probe" type="button">檢查端點</button> <button id="refresh" type="button">重新讀取雲端</button> <a href="../admin/" target="_blank" rel="noopener">開啟管理後台</a></nav>
+<ol><li>送出測試內容，記下收件編號。</li><li>在另一個瀏覽器開啟本頁並重新讀取，核對同一筆資料。</li><li>到後台依編號搜尋、編輯與下架；回到本頁核對變更與附件存取。</li></ol>
+<form id="f-up"><fieldset id="submission-fields" disabled><legend>新增合成測試投稿</legend>
+<label for="up-name">測試署名</label><input id="up-name" maxlength="200" value="驗收測試" required>
+<label for="up-story">測試文字</label><textarea id="up-story" maxlength="5000" rows="4" placeholder="例如：驗收測試＋目前時間"></textarea>
+<label for="up-files">照片／短影片（與 YouTube 合計最多 10 個）</label><input id="up-files" type="file" accept="image/*,video/*" multiple>
+<ul id="files"></ul><p data-file-status role="status"></p>
+<label for="up-youtube">YouTube HTTPS 連結（選填）</label><input id="up-youtube" type="url">
+<label><input id="up-consent" type="checkbox" required>我確認素材可用於此次公開驗收。</label>
+<div data-challenge></div><p id="form-error" role="alert"></p>
+<button id="send" type="submit">送出雲端測試</button> <button id="new-test" type="button">清空並開始下一筆</button>
+</fieldset></form>
+<pre id="receipt" role="status"></pre><h2>雲端測試投稿</h2><p>只列出署名以「驗收」開頭的投稿；這是顯示篩選，不是資料存取權限。</p><section id="records"></section>
+<footer>未完成 Drive 授權前，不會因本頁顯示收到就代表 Drive 已歸檔。此驗收亦不代表 200 人負載已通過。</footer>
+</main></body></html>
