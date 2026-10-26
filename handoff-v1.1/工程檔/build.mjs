@@ -12,13 +12,14 @@ for(const c of data.concerts)if(!assets[c.asset])throw Error('Missing concert as
 const origScript=originalHTML.match(/<script>([\s\S]*?)<\/script>/)[1];
 function removeFunction(code,name){const re=new RegExp('^function '+name+'\\(', 'm'),m=re.exec(code);if(!m)throw Error('Function absent '+name);const e=code.indexOf('\n',m.index);const line=code.slice(m.index,e).trim();let end;if(line.endsWith('}'))end=e+1;else{const close=/\n\}\r?\n/.exec(code.slice(e));if(!close)throw Error('Function close '+name);end=e+close.index+close[0].length}return code.slice(0,m.index)+code.slice(end)}
 let core=origScript.slice(0,origScript.indexOf('/* ---------- 表單 ---------- */'));
-core=core.replace(/const MEM_RAW=[\s\S]*?(?=const dateTxt=)/,`const MEM=ARCHIVE.memories.map(m=>({...m,src:ASSETS[m.asset]?.url||'',w:ASSETS[m.asset]?.w||400,h:ASSETS[m.asset]?.h||300}));\n`);
+core=core.replace(/const MEM_RAW=[\s\S]*?(?=const dateTxt=)/,`const MEM=(CLOUD_CONFIG.existingMemoriesEnabled?[]:ARCHIVE.memories).map(m=>({...m,src:ASSETS[m.asset]?.url||'',w:ASSETS[m.asset]?.w||400,h:ASSETS[m.asset]?.h||300}));\n`);
 core=core.replace(/const W=[\s\S]*?(?=const fmtDate=)/,`const P='program',M='memory';\nconst CON=ARCHIVE.concerts.map(c=>({...c,poster:ASSETS[c.asset].url,rows:c.rows.map((r,i)=>({...r,no:i+1}))}));\n`);
 core=core.replace("$('#aboutImg').src=art(77,480,600);","$('#aboutImg').src=ASSETS['lu-portrait'].url;");
 core=core.replace(/\/\* ---------- 示範圖片產生器[\s\S]*?(?=\$\('#aboutImg'\))/, '');
 core=core.replaceAll('示範資料：','公開紀錄：');
 core=core.replace('CON.forEach(c=>c.rows.forEach(r=>','CON.filter(c=>!c.status&&c.role!=="指揮身分待核對").forEach(c=>c.rows.forEach(r=>');
 core=core.replace(/^const dateTxt=.*?;\r?$/m,"const dateTxt=m=>m.y?`${m.y} 年${m.m?' '+m.m+' 月':''}`:'音樂記憶';");
+core=core.replace(/^const fmtDate=.*?;\r?$/m,"const fmtDate=d=>{const[y,m,dd]=d.split('-');return y+' 年'+(m?' '+Number(m)+' 月':'')+(dd?' '+Number(dd)+' 日':'')};");
 core=core.replace(/^const memAlt=.*?;\r?$/m,"const memAlt=m=>m.n;");
 core=core.replace("const mem={sort:'latest',q:'',shown:8,order:null};","const mem={sort:'latest',q:'',shown:8,order:null,type:'all'};");
 core=core.replace("tab:'timeline',dir:'desc'","tab:'timeline',dir:'asc'");
@@ -41,11 +42,12 @@ interaction=interaction.replace("button.textContent=theme==='dark'?'☀':'☾'",
 interaction=interaction.replace(/^\$\('#musicBtn'\).textContent=.*?;\r?$/m,"setupBackgroundMusic();");
 interaction=interaction.replace(/^new IntersectionObserver.*?;\r?$/m,'');
 interaction=interaction.replace("poster:undefined,progImg:undefined,media:(c.media||[]).map(({url,...a})=>a)","poster:undefined,progImg:undefined,media:(c.media||[]).map(a=>a.blob?(({url,...rest})=>rest)(a):a)");
-let state=`const ARCHIVE=${JSON.stringify(data)};\nconst ASSETS=${JSON.stringify(assets)};\nconst storageState={db:null,ready:false,readyPromise:null,error:'',sequence:0,likes:new Set(),urls:new Set(),attachment:0,albumIds:[],reportContext:null};\n`;
 const cloudConfig=JSON.parse(read('cloud-config.json'));
+const publicData=cloudConfig.existingMemoriesEnabled?{...data,memories:[],memoryIds:data.memories.map(m=>m.id)}:data;
+let state=`const ARCHIVE=${JSON.stringify(publicData)};\nconst ASSETS=${JSON.stringify(assets)};\nconst storageState={db:null,ready:false,readyPromise:null,error:'',sequence:0,likes:new Set(),urls:new Set(),attachment:0,albumIds:[],reportContext:null};\n`;
 if(cloudConfig.enabled&&(!cloudConfig.turnstileSiteKey||!Number.isSafeInteger(cloudConfig.maxUploadBytes)||cloudConfig.maxUploadBytes<=0))throw Error('Invalid cloud intake configuration');
 for(const key of ['intakeEndpoint','mediaEndpoint'])if(new URL(cloudConfig[key]).protocol!=='https:')throw Error('Cloud endpoints require HTTPS');
-let app=fs.readFileSync(path.join(dir,'../../acceptance/src/sync.mjs'),'utf8').replace(/^export /gm,'')+'\n'+read('connection.js')+'\n'+state+'const CLOUD_CONFIG='+JSON.stringify(cloudConfig)+';\n'+read('cloud.js')+'\nconst expandedMemories=new Set();\n'+core+'\n'+forms+'\n'+read('archive.js')+'\n'+interaction+`\nlt.addEventListener('keydown',e=>{if(e.target.closest('video,iframe'))return;if(e.key==='ArrowRight'){e.preventDefault();step(1)}if(e.key==='ArrowLeft'){e.preventDefault();step(-1)}});\n${read('home-cloud.js')}\nif(ProjectCloud.enabled())storageState.readyPromise.finally(startHomepageCloud);\n`;
+let app=fs.readFileSync(path.join(dir,'../../acceptance/src/sync.mjs'),'utf8').replaceAll('\r\n','\n').replace(/^export /gm,'')+'\n'+read('connection.js')+'\n'+state+'const CLOUD_CONFIG='+JSON.stringify(cloudConfig)+';\n'+read('cloud.js')+'\n'+fs.readFileSync(path.join(dir,'../../shared/catalog.mjs'),'utf8').replace(/^export /gm,'')+'\n'+read('catalog-client.js')+'\nconst expandedMemories=new Set();\n'+core+'\n'+forms+'\n'+read('archive.js')+'\n'+interaction+`\nlt.addEventListener('keydown',e=>{if(e.target.closest('video,iframe'))return;if(e.key==='ArrowRight'){e.preventDefault();step(1)}if(e.key==='ArrowLeft'){e.preventDefault();step(-1)}});\n${read('home-cloud.js')}\nif(ProjectCloud.enabled())storageState.readyPromise.finally(startHomepageCloud);\n`;
 new vm.Script(app);
 let html=originalHTML.replace(/^.*?<body>\r?\n/s,'<!doctype html>\n<html lang="zh-Hant">\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">\n');
 html=html.replace('<meta name="claude:viewport-fit-sides" content="cover">','<meta name="description" content="呂彥慶指揮的音樂生涯、真實演出照片與影片、音樂會及曲目紀錄。大呂的音樂，未完待續。">\n<meta property="og:title" content="大呂的音樂，未完待續">\n<meta property="og:type" content="website">\n<meta property="og:description" content="那些一起演奏的日子，那些一起走過的時光。紀念呂彥慶指揮。">\n<meta property="og:image" content="https://tapba.asia/wp-content/uploads/2022/01/%E5%91%82%E5%BD%A5%E6%85%B62.jpg">\n<meta name="referrer" content="strict-origin-when-cross-origin">');
@@ -55,8 +57,8 @@ html=html.replace('回憶照片牆（示範照片）','呂彥慶指揮與樂團�
 html=html.replace('id="musicBtn" type="button" aria-pressed="false"','id="musicBtn" type="button" aria-expanded="false" aria-controls="background-music"');
 html=html.replace('alt="指揮照片的預留位置（示範圖）"','alt="呂彥慶指揮肖像"');
 html=html.replace('<figcaption>預留位置：之後請換成一張具代表性的指揮照片。</figcaption>',`<figcaption><a href="${data.sources.tapba}" target="_blank" rel="noopener noreferrer">呂彥慶指揮｜臺北亞太管樂協會</a></figcaption>`);
-html=html.replace(/<p>呂彥慶老師，大家都叫他「大呂」。[\s\S]*?<\/p>/,`<p>${data.biography}</p>`);
-html=html.replace(/<div class="placeholder" style="margin-top:18px">[\s\S]*?<\/div>/,`<p style="margin-top:18px">${data.biographyMore}</p><details class="career"><summary>閱讀完整音樂生涯</summary><div class="career-grid" id="careerBody"></div></details>`);
+html=html.replace(/<p>呂彥慶老師，大家都叫他「大呂」。[\s\S]*?<\/p>/,`<p id="catalog-biography">${data.biography}</p>`);
+html=html.replace(/<div class="placeholder" style="margin-top:18px">[\s\S]*?<\/div>/,`<p id="catalog-biography-more" style="margin-top:18px">${data.biographyMore}</p><details class="career"><summary>閱讀完整音樂生涯</summary><div class="career-grid" id="careerBody"></div></details>`);
 html=html.replace('最近收錄的音樂會（示範資料）。','在一場場演出中，找回共同奏響的旋律。');
 html=html.replace('每個人的記憶，都是大呂生命中的一段旋律。點選照片可閱讀背後的故事。','從公開影像開始，慢慢收集每個人與大呂的故事。點選照片或影片，重返那些音樂時刻。');
 html=html.replace('最新分享</button>','最新收錄</button>');
@@ -79,6 +81,7 @@ html=html.replace('<span>大呂的音樂，未完待續</span>','<span>'+pageNam
 html=html.replace('<h1>大呂的音樂，未完待續</h1>','<h1>大呂的音樂，未完待續</h1><span class="site-version">'+version+'</span>');
 html=html.replace('<dialog id="dlg-sources"',`<aside id="background-music" class="background-music" aria-label="背景音樂" hidden><div class="music-heading"><span>Simple Gift</span><button id="music-close" type="button" aria-label="關閉背景音樂">×</button></div><div id="music-frame"></div><a class="source-link" href="https://www.youtube.com/watch?v=n7mhsJLAsVk" target="_blank" rel="noopener noreferrer">在 YouTube 聆聽 ↗</a></aside>\n<dialog id="dlg-sources"`);
 html=html.replace(/<script>[\s\S]*?<\/script>/,()=>'<script>\n'+app.replace(/<\/script/gi,'<\\/script')+'\n</script>');
+if(cloudConfig.catalogEnabled)html=html.replace('<body>','<body class="catalog-pending"><p class="catalog-status" data-catalog-status role="status">正在載入音樂會與大呂生平……</p>');
 fs.mkdirSync(path.join(dir,'dist'),{recursive:true});
 for(const file of ['index.html',pageName+'.html'])fs.writeFileSync(path.join(dir,'dist',file),html);
 fs.writeFileSync(path.join(dir,'app-check.js'),app);

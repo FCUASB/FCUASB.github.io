@@ -22,3 +22,8 @@ jobs:
       - run: npm run check:edge
       - run: npm run check:cloud-sql
       - run: npm run check:edge-bundle
+      - run: npm run test:home
+      - run: npm run test:catalog
+      - run: npm run check:catalog
+      - run: npm run test:memories
+      - run: npm run check:memories

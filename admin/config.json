@@ -5,5 +5,7 @@
   "adminEndpoint": "https://rikgchswpjaxlnhdrxtw.supabase.co/functions/v1/admin",
   "mediaEndpoint": "https://rikgchswpjaxlnhdrxtw.supabase.co/functions/v1/media",
   "passkeysEnabled": false,
-  "auditEnabled": false
+  "auditEnabled": false,
+  "catalogEnabled": true,
+  "catalogEndpoint": "https://rikgchswpjaxlnhdrxtw.supabase.co/functions/v1/catalog"
 }

@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow"><meta name="referrer" content="no-referrer">
-<title>大呂紀念網站｜管理後台</title><link rel="stylesheet" href="./style.css"><script type="module" src="./app.js"></script></head>
+<title>大呂紀念網站｜管理後台</title><link rel="stylesheet" href="./style.css?v=b203ed9ea940"><script type="module" src="./app.js?v=d64bdf6e7fd7"></script></head>
 <body><header><a href="/">← 回網站</a><h1>內容管理</h1><p id="identity">請登入校友團授權的管理員帳號。</p></header>
 <main><p id="status" role="status" aria-live="polite"></p>
 <section id="login-panel"><h2>管理員登入</h2><form id="login-form">
@@ -11,7 +11,7 @@
 <button id="reset-password" type="button">忘記密碼</button></form><p>帳號由校友團邀請。登入成功仍須取得後台角色。</p></section>
 <section id="recovery-panel" hidden><h2>設定新密碼</h2><form id="recovery-form"><label>新密碼<input id="new-password" type="password" autocomplete="new-password" minlength="12" required></label><button type="submit">更新密碼</button></form></section>
 <div id="workspace" hidden><nav aria-label="管理工具"><button id="logout">登出</button><button id="register-passkey" hidden>新增 passkey</button><button id="list-passkeys" hidden>管理 passkey</button><button id="members-button" hidden>帳號角色</button><button id="audit-button" hidden>操作紀錄</button><button id="archive-button">歸檔狀態</button></nav>
-<nav class="content-sections" aria-label="內容分區"><button type="button" id="section-submissions" aria-pressed="true" aria-controls="submissions-panel">回憶投稿</button><button type="button" id="section-concert" aria-pressed="false" aria-controls="concert-panel">音樂會</button><button type="button" id="section-biography" aria-pressed="false" aria-controls="biography-panel">大呂生平</button></nav>
+<nav class="content-sections" aria-label="內容分區"><button type="button" id="section-submissions" aria-pressed="true" aria-controls="submissions-panel">回憶投稿</button><button type="button" id="section-memory" aria-pressed="false" aria-controls="memory-panel">既有回憶</button><button type="button" id="section-concert" aria-pressed="false" aria-controls="concert-panel">音樂會</button><button type="button" id="section-biography" aria-pressed="false" aria-controls="biography-panel">大呂生平</button></nav>
 <section id="submissions-panel"><h2>回憶投稿</h2><form id="search-form"><label>搜尋署名、文字或投稿編號<input id="query" type="search" maxlength="200"></label>
 <label>篩選<select id="filter"><option value="all">全部</option><option value="active">公開中</option><option value="deleted">已下架</option><option value="upload_failed">附件失敗</option><option value="archive_failed">歸檔失敗</option></select></label>
 <button type="submit">搜尋</button><button id="export" type="button" hidden>匯出含聯絡資料的 CSV</button></form>
@@ -19,6 +19,7 @@
 </section>
 <section id="concert-panel" hidden><h2>音樂會</h2><p>管理演出資料與曲目；下架保留原始資料及版本，網站下次同步會更新。</p><form id="concert-search"><label>搜尋音樂會、團體、日期或地點<input type="search" id="concert-query" maxlength="200"></label><label>顯示<select id="concert-filter"><option value="all">全部</option><option value="active">公開中</option><option value="deleted">已下架</option></select></label><button type="submit">搜尋音樂會</button><button type="button" id="concert-reload">重新讀取音樂會</button><button type="button" id="concert-new" hidden>新增音樂會</button></form><p id="concert-count" role="status"></p><div id="concert-results"></div></section>
 <section id="biography-panel" hidden><h2>大呂生平</h2><p>管理生平介紹與生涯時間軸，請保留每筆來源及待核對註記。</p><button type="button" id="biography-reload">重新讀取生平</button><div id="biography-content"></div></section>
+<section id="memory-panel" hidden><h2>既有回憶</h2><p>管理網站原有的文字、照片與影片資料；這些資料並非新投稿。保留署名、來源、待核對註記及原素材。下架保留版本，網站下次同步會更新。</p><form id="memory-search"><label>搜尋標題、文字、年份、來源或編號<input type="search" id="memory-query" maxlength="200"></label><label>顯示<select id="memory-filter"><option value="all">全部</option><option value="active">公開中</option><option value="deleted">已下架</option></select></label><button type="submit">搜尋既有回憶</button><button type="button" id="memory-reload">重新讀取</button><button type="button" id="memory-export" hidden>匯出內容 JSON</button></form><p id="memory-count" role="status"></p><div id="memory-results"></div></section>
 <section id="catalog-history" hidden aria-label="內容版本紀錄"></section>
 <section id="audit-panel" hidden><h2>操作紀錄</h2><p>僅列出時間、操作者、動作與目標編號；不顯示聯絡資料或內容快照。</p><form id="audit-form"><label>操作者 ID<input id="audit-actor"></label><label>目標 ID<input id="audit-target"></label><label>動作（例如 member.changed）<input id="audit-action" maxlength="80"></label><button type="submit">查詢紀錄</button></form><div id="audit-results"></div><button id="audit-next" hidden>下一頁紀錄</button></section>
 <section id="security-panel" hidden><h2>Passkey</h2><p>請保留可用的復原信箱與備用登入方式。</p><div id="passkeys"></div></section>
@@ -27,4 +28,4 @@
 <form id="member-form"><label>已建立的 Auth 使用者 ID<input id="member-id" required></label><label>角色<select id="member-role"><option value="content_admin">內容管理員</option><option value="data_curator">資料整理員</option><option value="system_admin">系統管理員</option></select></label><label class="check"><input id="member-active" type="checkbox" checked>啟用帳號</label><button type="submit">儲存角色</button></form></section></div>
 <dialog id="catalog-edit-dialog"><form id="catalog-edit-form"></form></dialog>
 <dialog id="edit-dialog"><form id="edit-form"><h2>編輯投稿</h2><label>署名<input id="edit-name" maxlength="200" required></label><label>年份<input id="edit-year" type="number" min="1977"></label><label>文字<textarea id="edit-body" maxlength="5000" rows="8"></textarea></label><button type="submit">儲存</button><button id="cancel-edit" type="button">取消</button></form></dialog>
-</main><footer>聯絡資料僅限獲授權人員使用。下架會保留原始資料，並停止本站公開存取。</footer></body></html>
+</main><footer>聯絡資料僅限獲授權人員使用。下架保留原始資料與紀錄，停止前台顯示；雲端投稿附件停止公開存取。原有公開素材與外部影片不會因此刪除原檔。</footer></body></html>

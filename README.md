@@ -42,3 +42,13 @@ npm run serve
 編輯 `handoff-v1.1/工程檔/content.json`，在根目錄執行 `npm run build`，提交來源與同步後的兩份 `index.html`。不要直接手改發布 HTML。
 
 完整功能說明、資料來源、人工校對與已知限制見 [handoff-v1.1/README.md](handoff-v1.1/README.md)。投稿保存在訪客自己的瀏覽器 IndexedDB，尚未連接共用收件後台。
+
+
+## 首頁雲端接入
+
+正式首頁的新回憶投稿已於 2026-10-26 透過 PR #9 接入 Supabase，包含每 10 秒同步與下架更新。行為、驗證限制與復原方式見 [接入說明](docs/HOMEPAGE-CLOUD.md)。使用 Node.js 24，執行 npm run build、npm run check、npm run test:home。既有本機內容不會自動上傳；其他補充與檢舉仍是本機資料。
+
+
+## 音樂會與大呂生平管理
+
+音樂會與生平的資料庫及 catalog API 已接通；本批前端發布後提供後台分區、雲端內容版本與同步。接續操作與驗證限制見 [管理與部署說明](docs/CATALOG-MANAGEMENT.md)。

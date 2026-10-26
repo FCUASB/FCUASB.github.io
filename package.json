@@ -23,7 +23,13 @@
     "proofread": "node scripts/project.mjs proofread",
     "build:acceptance": "node scripts/build-acceptance.mjs",
     "check:acceptance": "node scripts/build-acceptance.mjs --check",
-    "test:home": "node --test scripts/home-cloud.test.mjs scripts/cloud-client.test.mjs scripts/acceptance-sync.test.mjs"
+    "test:home": "node --test scripts/home-cloud.test.mjs scripts/cloud-client.test.mjs scripts/acceptance-sync.test.mjs",
+    "test:catalog": "node --test scripts/catalog.test.mjs scripts/catalog-client.test.mjs scripts/catalog-ui.test.mjs scripts/admin-client.test.mjs",
+    "prepare:catalog": "node scripts/prepare-catalog.mjs",
+    "check:catalog": "node scripts/prepare-catalog.mjs --check",
+    "prepare:memories": "node scripts/prepare-existing-memories.mjs",
+    "check:memories": "node scripts/prepare-existing-memories.mjs --check",
+    "test:memories": "node --test scripts/existing-memories.test.mjs"
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.5.11",

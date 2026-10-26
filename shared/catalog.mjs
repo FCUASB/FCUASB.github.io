@@ -25,6 +25,17 @@ export function validateCatalogDocument(kind, raw) {
       if (!Number.isInteger(item.timelineOrder) || item.timelineOrder < 19770000 || item.timelineOrder > 30001231) fail();
       sourced(item);
     }
+  } else if (kind === 'memory') {
+    if (!Number.isSafeInteger(doc.id) || doc.id < 1) fail();
+    string(doc.n, 200, true); string(doc.story, 5000);
+    if (!['text','photo','video'].includes(doc.type)) fail();
+    if (doc.type === 'text' && !doc.story.trim()) fail();
+    if (doc.y != null && (!Number.isInteger(doc.y) || doc.y < 1977 || doc.y > 3000)) fail();
+    if (doc.m != null && (!Number.isInteger(doc.m) || doc.m < 1 || doc.m > 12 || doc.y == null)) fail();
+    for (const key of ['place','sourceName','sourceNote','asset','youtube','externalVideo']) if (doc[key] != null) string(doc[key], 2000);
+    if (doc.type !== 'text' && (typeof doc.asset !== 'string' || !/^[A-Za-z0-9_-]+$/.test(doc.asset))) fail();
+    if (doc.youtube && !/^[A-Za-z0-9_-]{11}$/.test(doc.youtube)) fail();
+    sourced(doc);
   } else if (kind === 'concert') {
     if (!Number.isSafeInteger(doc.id) || doc.id < 1) fail();
     string(doc.title, 300, true); string(doc.date, 10, true);
