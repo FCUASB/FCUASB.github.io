@@ -19,3 +19,8 @@ python -m http.server 8000
 編輯 `handoff-v1.1/工程檔/content.json`，於該目錄執行 `node build.mjs`，將輸出的 `dist/index.html` 同步到 `handoff-v1.1/index.html` 與根目錄 `index.html`。
 
 完整功能說明、資料來源、人工校對與已知限制見 [handoff-v1.1/README.md](handoff-v1.1/README.md)。投稿保存在訪客自己的瀏覽器 IndexedDB，尚未連接共用收件後台。
+
+
+## 首頁雲端接入
+
+本分支準備將新回憶投稿接入既有 Supabase，包含每 10 秒同步與下架更新；尚未發布。行為、驗證限制與復原方式見 [接入說明](docs/HOMEPAGE-CLOUD.md)。使用 Node.js 24，執行 npm run build、npm run check、npm run test:home。既有本機內容不會自動上傳；其他補充與檢舉仍是本機資料。
