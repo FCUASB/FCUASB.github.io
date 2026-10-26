@@ -89,6 +89,18 @@
         if (!Number.isInteger(item.timelineOrder) || item.timelineOrder < 1977e4 || item.timelineOrder > 30001231) fail();
         sourced(item);
       }
+    } else if (kind === "memory") {
+      if (!Number.isSafeInteger(doc.id) || doc.id < 1) fail();
+      string(doc.n, 200, true);
+      string(doc.story, 5e3);
+      if (!["text", "photo", "video"].includes(doc.type)) fail();
+      if (doc.type === "text" && !doc.story.trim()) fail();
+      if (doc.y != null && (!Number.isInteger(doc.y) || doc.y < 1977 || doc.y > 3e3)) fail();
+      if (doc.m != null && (!Number.isInteger(doc.m) || doc.m < 1 || doc.m > 12 || doc.y == null)) fail();
+      for (const key2 of ["place", "sourceName", "sourceNote", "asset", "youtube", "externalVideo"]) if (doc[key2] != null) string(doc[key2], 2e3);
+      if (doc.type !== "text" && (typeof doc.asset !== "string" || !/^[A-Za-z0-9_-]+$/.test(doc.asset))) fail();
+      if (doc.youtube && !/^[A-Za-z0-9_-]{11}$/.test(doc.youtube)) fail();
+      sourced(doc);
     } else if (kind === "concert") {
       if (!Number.isSafeInteger(doc.id) || doc.id < 1) fail();
       string(doc.title, 300, true);
@@ -143,7 +155,7 @@
         const body = await boundedJSON(request, 98304);
         if (!["list", "save", "visibility", "history"].includes(body.action)) throw new IntakeError(400, "INVALID_ACTION");
         const input = body.input || {};
-        if (!["concert", "biography"].includes(input.kind)) throw new IntakeError(400, "INVALID_INPUT");
+        if (!["concert", "biography", "memory"].includes(input.kind)) throw new IntakeError(400, "INVALID_INPUT");
         const clean = { kind: input.kind };
         if (body.action !== "list") {
           if (typeof input.id !== "string" || !(input.kind === "biography" ? input.id === "main" : /^[1-9]\d{0,15}$/.test(input.id))) throw new IntakeError(400, "INVALID_ID");
@@ -158,9 +170,9 @@
             } catch {
               throw new IntakeError(400, "INVALID_CONTENT");
             }
-            if (input.kind === "concert" && String(clean.document.id) !== clean.id) throw new IntakeError(400, "INVALID_ID");
+            if (input.kind !== "biography" && String(clean.document.id) !== clean.id) throw new IntakeError(400, "INVALID_ID");
           } else {
-            if (input.kind !== "concert" || typeof input.deleted !== "boolean") throw new IntakeError(400, "INVALID_STATE");
+            if (!["concert", "memory"].includes(input.kind) || typeof input.deleted !== "boolean") throw new IntakeError(400, "INVALID_STATE");
             clean.deleted = input.deleted;
           }
         }

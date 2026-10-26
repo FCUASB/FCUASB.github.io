@@ -12,7 +12,7 @@ for(const c of data.concerts)if(!assets[c.asset])throw Error('Missing concert as
 const origScript=originalHTML.match(/<script>([\s\S]*?)<\/script>/)[1];
 function removeFunction(code,name){const re=new RegExp('^function '+name+'\\(', 'm'),m=re.exec(code);if(!m)throw Error('Function absent '+name);const e=code.indexOf('\n',m.index);const line=code.slice(m.index,e).trim();let end;if(line.endsWith('}'))end=e+1;else{const close=/\n\}\r?\n/.exec(code.slice(e));if(!close)throw Error('Function close '+name);end=e+close.index+close[0].length}return code.slice(0,m.index)+code.slice(end)}
 let core=origScript.slice(0,origScript.indexOf('/* ---------- 表單 ---------- */'));
-core=core.replace(/const MEM_RAW=[\s\S]*?(?=const dateTxt=)/,`const MEM=ARCHIVE.memories.map(m=>({...m,src:ASSETS[m.asset]?.url||'',w:ASSETS[m.asset]?.w||400,h:ASSETS[m.asset]?.h||300}));\n`);
+core=core.replace(/const MEM_RAW=[\s\S]*?(?=const dateTxt=)/,`const MEM=(CLOUD_CONFIG.existingMemoriesEnabled?[]:ARCHIVE.memories).map(m=>({...m,src:ASSETS[m.asset]?.url||'',w:ASSETS[m.asset]?.w||400,h:ASSETS[m.asset]?.h||300}));\n`);
 core=core.replace(/const W=[\s\S]*?(?=const fmtDate=)/,`const P='program',M='memory';\nconst CON=ARCHIVE.concerts.map(c=>({...c,poster:ASSETS[c.asset].url,rows:c.rows.map((r,i)=>({...r,no:i+1}))}));\n`);
 core=core.replace("$('#aboutImg').src=art(77,480,600);","$('#aboutImg').src=ASSETS['lu-portrait'].url;");
 core=core.replace(/\/\* ---------- 示範圖片產生器[\s\S]*?(?=\$\('#aboutImg'\))/, '');
@@ -42,8 +42,9 @@ interaction=interaction.replace("button.textContent=theme==='dark'?'☀':'☾'",
 interaction=interaction.replace(/^\$\('#musicBtn'\).textContent=.*?;\r?$/m,"setupBackgroundMusic();");
 interaction=interaction.replace(/^new IntersectionObserver.*?;\r?$/m,'');
 interaction=interaction.replace("poster:undefined,progImg:undefined,media:(c.media||[]).map(({url,...a})=>a)","poster:undefined,progImg:undefined,media:(c.media||[]).map(a=>a.blob?(({url,...rest})=>rest)(a):a)");
-let state=`const ARCHIVE=${JSON.stringify(data)};\nconst ASSETS=${JSON.stringify(assets)};\nconst storageState={db:null,ready:false,readyPromise:null,error:'',sequence:0,likes:new Set(),urls:new Set(),attachment:0,albumIds:[],reportContext:null};\n`;
 const cloudConfig=JSON.parse(read('cloud-config.json'));
+const publicData=cloudConfig.existingMemoriesEnabled?{...data,memories:[],memoryIds:data.memories.map(m=>m.id)}:data;
+let state=`const ARCHIVE=${JSON.stringify(publicData)};\nconst ASSETS=${JSON.stringify(assets)};\nconst storageState={db:null,ready:false,readyPromise:null,error:'',sequence:0,likes:new Set(),urls:new Set(),attachment:0,albumIds:[],reportContext:null};\n`;
 if(cloudConfig.enabled&&(!cloudConfig.turnstileSiteKey||!Number.isSafeInteger(cloudConfig.maxUploadBytes)||cloudConfig.maxUploadBytes<=0))throw Error('Invalid cloud intake configuration');
 for(const key of ['intakeEndpoint','mediaEndpoint'])if(new URL(cloudConfig[key]).protocol!=='https:')throw Error('Cloud endpoints require HTTPS');
 let app=fs.readFileSync(path.join(dir,'../../acceptance/src/sync.mjs'),'utf8').replaceAll('\r\n','\n').replace(/^export /gm,'')+'\n'+read('connection.js')+'\n'+state+'const CLOUD_CONFIG='+JSON.stringify(cloudConfig)+';\n'+read('cloud.js')+'\n'+fs.readFileSync(path.join(dir,'../../shared/catalog.mjs'),'utf8').replace(/^export /gm,'')+'\n'+read('catalog-client.js')+'\nconst expandedMemories=new Set();\n'+core+'\n'+forms+'\n'+read('archive.js')+'\n'+interaction+`\nlt.addEventListener('keydown',e=>{if(e.target.closest('video,iframe'))return;if(e.key==='ArrowRight'){e.preventDefault();step(1)}if(e.key==='ArrowLeft'){e.preventDefault();step(-1)}});\n${read('home-cloud.js')}\nif(ProjectCloud.enabled())storageState.readyPromise.finally(startHomepageCloud);\n`;

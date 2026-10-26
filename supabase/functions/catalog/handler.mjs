@@ -25,7 +25,7 @@ export function createCatalogHandler({ origins, enabled = false, authenticate, e
       const body = await boundedJSON(request, 98304);
       if (!['list', 'save', 'visibility', 'history'].includes(body.action)) throw new IntakeError(400, 'INVALID_ACTION');
       const input = body.input || {};
-      if (!['concert', 'biography'].includes(input.kind)) throw new IntakeError(400, 'INVALID_INPUT');
+      if (!['concert', 'biography', 'memory'].includes(input.kind)) throw new IntakeError(400, 'INVALID_INPUT');
       const clean = { kind: input.kind };
       if (body.action !== 'list') {
         if (typeof input.id !== 'string' || !(input.kind === 'biography' ? input.id === 'main' : /^[1-9]\d{0,15}$/.test(input.id))) throw new IntakeError(400, 'INVALID_ID');
@@ -36,9 +36,9 @@ export function createCatalogHandler({ origins, enabled = false, authenticate, e
         clean.revision = input.revision;
         if (body.action === 'save') {
           try { clean.document = validateCatalogDocument(input.kind, input.document); } catch { throw new IntakeError(400, 'INVALID_CONTENT'); }
-          if (input.kind === 'concert' && String(clean.document.id) !== clean.id) throw new IntakeError(400, 'INVALID_ID');
+          if (input.kind !== 'biography' && String(clean.document.id) !== clean.id) throw new IntakeError(400, 'INVALID_ID');
         } else {
-          if (input.kind !== 'concert' || typeof input.deleted !== 'boolean') throw new IntakeError(400, 'INVALID_STATE');
+          if (!['concert','memory'].includes(input.kind) || typeof input.deleted !== 'boolean') throw new IntakeError(400, 'INVALID_STATE');
           clean.deleted = input.deleted;
         }
       }
