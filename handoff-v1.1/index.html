@@ -253,6 +253,8 @@ footer .in-memory small{display:block;font-family:var(--latin);font-style:italic
 
 /* The original layout/CSS is preserved. Only real media, source notes and forms gain styles. */
 body.modal-open{overflow:hidden}
+/* Keep the portrait's natural proportions as its responsive width changes. */
+.about figure #aboutImg{height:auto}
 .source-link{color:var(--muted);text-decoration:none;font-size:.72rem!important;opacity:.65;overflow-wrap:anywhere;transition:opacity .2s}
 .source-link:hover,.source-link:focus-visible{opacity:1;text-decoration:underline}
 .lt-info .source-link{color:#D9BC85}
@@ -263,7 +265,10 @@ body.modal-open{overflow:hidden}
 .memory-read-more:hover{text-decoration:underline}
 .memory-open:focus-visible,.memory-read-more:focus-visible{outline:2px solid var(--gold-text);outline-offset:-3px}
 .media-story{padding-bottom:10px;font-size:.9rem}
-.memory-attribution .source-link{font-size:.7rem!important}
+.memory-heading{padding:20px 24px 16px;border-bottom:1px solid var(--line)}
+.memory-heading h3{margin:0 0 6px;font-family:var(--serif);font-size:1.1rem;font-weight:600;line-height:1.6;color:var(--gold-text);overflow-wrap:anywhere}
+.memory-attribution{font-size:.8rem;color:var(--muted);line-height:1.7;overflow-wrap:anywhere}
+.memory-attribution .source-link{font-size:.8rem!important;opacity:1}
 .background-music{position:fixed;bottom:20px;right:20px;width:min(340px,calc(100vw - 32px));z-index:45;background:#152336;color:#eee4d2;box-shadow:0 8px 35px #0004;border:1px solid #b99a6344;border-radius:5px;padding:8px 12px 10px}
 .background-music[hidden]{display:none}
 .music-heading{display:flex;align-items:center;justify-content:space-between;font-size:.85rem}
@@ -288,7 +293,8 @@ body.modal-open{overflow:hidden}
 .lt-stage .embed-wrap{min-width:0}
 .lt-stage video{display:block;width:100%;max-height:65vh}
 .lt-stage.text-stage{padding:36px;white-space:pre-line;color:#fff;font-family:var(--serif);line-height:2}
-.text-memory{display:block;padding:24px;white-space:pre-line;font-family:var(--serif);line-height:2}
+.text-memory{display:block;padding:20px 24px;white-space:pre-line;font-family:var(--sans);font-size:1rem;line-height:1.9;color:var(--fg);overflow-wrap:anywhere}
+@media(max-width:560px){.memory-heading{padding:18px 20px 14px}.text-memory{padding:18px 20px}}
 .ph video,.tile video{width:100%;height:100%;object-fit:cover}
 .lt-thumbs{display:flex;gap:8px;padding:12px;grid-column:1/-1;overflow:auto;background:#101a29}
 .lt-thumbs button{min-height:44px;min-width:70px;color:#fff;background:transparent;border:1px solid #8793a0}
@@ -333,7 +339,6 @@ body.modal-open{overflow:hidden}
 /* v1.1 fix: the share-memory dialog matches its 560px form instead of the default 720px dialog, removing the empty right gutter. */
 #dlg-upload{width:min(560px,calc(100vw - 20px))}
 .simple-upload{max-width:none}
-
 /* Keep intrinsic photo proportions when HTML width/height attributes are present. */
 .about figure img{height:auto}
 .detail-top .poster{height:auto;aspect-ratio:auto;object-fit:contain}
@@ -942,7 +947,7 @@ function memoryExcerpt(m){const chars=storyCharacters(m.story),expanded=expanded
 function renderMem(){const list=memList();$('#masonry').innerHTML=list.slice(0,mem.shown).map(m=>{
  const excerpt=memoryExcerpt(m),story=`<span id="memory-story-${m.id}" class="text-memory ${m.type==='text'?'':'media-story'}">${esc(excerpt.text)}</span>`;
  const visual=m.type==='text'?story:`<span class="ph" style="aspect-ratio:${m.w}/${m.h}">${m.type==='video'&&(m.local||m.cloud&&!m.youtube)?`<video src="${esc(m.src)}" muted playsinline preload="metadata"></video>`:`<img src="${esc(m.src)}" width="${m.w}" height="${m.h}" alt="${esc(m.n)}" loading="lazy">`}${m.type==='video'?'<span class="play"></span>':''}</span>${m.story?story:''}`;
- return `<article class="m-item"><button type="button" class="memory-open" data-mem="${m.id}" aria-label="開啟${esc(m.n)}的回憶">${visual}</button>${excerpt.remaining?`<button type="button" class="memory-read-more" data-expand-memory="${m.id}" aria-expanded="${excerpt.expanded}" aria-controls="memory-story-${m.id}">${excerpt.expanded?'收起文字':'閱讀剩下'+excerpt.remaining+'字'}</button>`:''}<span class="txt"><b>${m.y?esc(m.y)+' ・ ':''}${esc(m.n)}</b><span class="memory-attribution">${m.cloud?'親友投稿'+(m.pendingAttachments?' ・ 附件處理中':''):m.local?'我的回憶':sourceLink(m.source,m.sourceName||'資料來源')}</span></span></article>`;
+ return `<article class="m-item"><header class="memory-heading"><h3>${esc(m.n)}</h3><div class="memory-attribution">${m.y?`<span>${esc(m.y)} ・ </span>`:''}${m.cloud?'親友投稿'+(m.pendingAttachments?' ・ 附件處理中':''):m.local?'我的回憶':sourceLink(m.source,m.sourceName||'資料來源')}</div></header><button type="button" class="memory-open" data-mem="${m.id}" aria-label="開啟${esc(m.n)}的回憶">${visual}</button>${excerpt.remaining?`<button type="button" class="memory-read-more" data-expand-memory="${m.id}" aria-expanded="${excerpt.expanded}" aria-controls="memory-story-${m.id}">${excerpt.expanded?'收起文字':'閱讀剩下'+excerpt.remaining+'字'}</button>`:''}</article>`;
  }).join('');$('#memEmpty').hidden=!!list.length;$('#moreBtn').hidden=list.length<=mem.shown}
 function drawLight(){const m=MEM.find(x=>x.id===ltId);if(!m)return;const ids=storageState.albumIds.length?storageState.albumIds:MEM.map(x=>x.id),index=ids.indexOf(m.id)+1;const media=m.media?.[storageState.attachment||0];
  let visual=media?(media.youtube?videoPlayer({youtube:media.youtube,n:m.n}):media.type==='video'?`<video src="${esc(media.url)}" controls playsinline preload="metadata"></video>`:`<img src="${esc(media.url)}" alt="${esc(m.n)}">`):m.type==='text'?`<div class="text-sheet">${esc(m.story)}</div>`:m.type==='video'?videoPlayer(m):`<img src="${esc(m.src)}" alt="${esc(m.n)}">`;
