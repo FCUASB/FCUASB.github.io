@@ -1,0 +1,3 @@
+# Generated pages must compare byte-for-byte on Windows and Linux.
+/index.html text eol=lf
+/handoff-v1.1/index.html text eol=lf

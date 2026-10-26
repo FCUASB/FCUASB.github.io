@@ -1,0 +1,7 @@
+{
+  "enabled": true,
+  "intakeEndpoint": "https://rikgchswpjaxlnhdrxtw.supabase.co/functions/v1/intake",
+  "mediaEndpoint": "https://rikgchswpjaxlnhdrxtw.supabase.co/functions/v1/media",
+  "turnstileSiteKey": "0x4AAAAAAFkPHUuhuLs8awBO",
+  "maxUploadBytes": 52428800
+}

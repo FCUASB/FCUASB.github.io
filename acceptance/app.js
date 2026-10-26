@@ -18,7 +18,7 @@ const ProjectCloud=(()=>{
    if(!CLOUD_CONFIG.turnstileSiteKey)throw Error();
    if(!window.turnstile){challengeScript??=new Promise((resolve,reject)=>{const s=document.createElement('script');s.src='https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';s.async=true;s.onload=resolve;s.onerror=reject;document.head.append(s)});await challengeScript}
    if(form._media?.disposed)return;
-   form._challenge=window.turnstile.render(mount,{sitekey:CLOUD_CONFIG.turnstileSiteKey,action:'memory-submit',callback:token=>{form._challengeToken=token},'expired-callback':()=>{form._challengeToken=''},'error-callback':()=>{form._challengeToken=''}});
+   form._challenge=window.turnstile.render(mount,{sitekey:CLOUD_CONFIG.turnstileSiteKey,size:'compact',action:'memory-submit',callback:token=>{form._challengeToken=token},'expired-callback':()=>{form._challengeToken=''},'error-callback':()=>{form._challengeToken=''}});
   }catch{formError(form,'無法載入投稿驗證，請確認網路後重新開啟表單。')}
  }
  function resetChallenge(form){form._challengeToken='';if(form._challenge!=null&&window.turnstile)window.turnstile.reset(form._challenge)}
