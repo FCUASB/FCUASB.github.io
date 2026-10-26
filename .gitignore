@@ -1,4 +1,5 @@
 node_modules/
+supabase/setup/*.local.html
 handoff-v1.1/工程檔/dist/
 handoff-v1.1/工程檔/app-check.js
 handoff-v1.1/工程檔/*－生涯與音樂歷史校對.txt

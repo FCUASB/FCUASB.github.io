@@ -13,8 +13,15 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - run: npm ci --ignore-scripts
+      - run: npm ci
       - run: npm run check
+      - run: npm run test:connection
+      - run: npm run test:cloud
+      - run: npm run check:admin
+      - run: npm run check:acceptance
+      - run: npm run check:edge
+      - run: npm run check:cloud-sql
+      - run: npm run check:edge-bundle
       - run: npm run test:home
       - run: npm run test:catalog
       - run: npm run check:catalog

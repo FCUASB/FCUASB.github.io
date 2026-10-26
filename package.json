@@ -7,11 +7,22 @@
     "node": ">=24 <25"
   },
   "scripts": {
+    "build:edge": "node scripts/build-edge.mjs",
+    "check:edge-bundle": "node scripts/build-edge.mjs --check",
+    "prepare:cloud-sql": "node scripts/prepare-cloud-sql.mjs",
+    "check:cloud-sql": "node scripts/prepare-cloud-sql.mjs --check",
+    "build:admin": "node scripts/build-admin.mjs",
+    "check:admin": "node scripts/build-admin.mjs --check",
+    "check:edge": "deno check supabase/functions/intake/index.ts supabase/functions/admin/index.ts supabase/functions/media/index.ts supabase/functions/archive-worker/index.ts",
+    "test:cloud": "node --test scripts/acceptance-sync.test.mjs scripts/intake.test.mjs scripts/admin-client.test.mjs scripts/admin.test.mjs scripts/media.test.mjs scripts/cloud-client.test.mjs scripts/database.test.mjs scripts/archive-worker.test.mjs scripts/archive-queue.test.mjs scripts/edge-bundle.test.mjs",
+    "test:connection": "node --test scripts/connection.test.mjs",
     "serve": "node scripts/serve.mjs",
     "start": "node scripts/serve.mjs",
     "build": "node scripts/project.mjs build",
     "check": "node scripts/project.mjs check",
     "proofread": "node scripts/project.mjs proofread",
+    "build:acceptance": "node scripts/build-acceptance.mjs",
+    "check:acceptance": "node scripts/build-acceptance.mjs --check",
     "test:home": "node --test scripts/home-cloud.test.mjs scripts/cloud-client.test.mjs scripts/acceptance-sync.test.mjs",
     "test:catalog": "node --test scripts/catalog.test.mjs scripts/catalog-client.test.mjs scripts/catalog-ui.test.mjs scripts/admin-client.test.mjs",
     "prepare:catalog": "node scripts/prepare-catalog.mjs",
@@ -21,6 +32,11 @@
     "test:memories": "node --test scripts/existing-memories.test.mjs"
   },
   "devDependencies": {
-    "@electric-sql/pglite": "0.5.11"
+    "@electric-sql/pglite": "0.5.11",
+    "deno": "2.9.6",
+    "esbuild": "0.28.2"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "2.118.0"
   }
 }
