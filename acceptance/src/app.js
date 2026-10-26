@@ -1,5 +1,5 @@
 // Bundled after the same cloud client used by the main website. No IndexedDB access.
-let CLOUD_CONFIG;
+let CLOUD_CONFIG, liveSync;
 const acceptedOrigin = location.origin === 'https://dalu.tw';
 const MEM = [], mem = {};
 const $ = (selector, root = document) => root.querySelector(selector);
@@ -37,7 +37,7 @@ async function start() {
     const result = await fetch(CLOUD_CONFIG.intakeEndpoint, { credentials: 'omit', redirect: 'error', signal: AbortSignal.timeout(15000) });
     $('#status').textContent = `收件端點 HTTP ${result.status}。` + (result.status === 401 ? '平台仍要求 JWT，匿名投稿尚不可用。' : result.status === 503 ? '後端尚未啟用。' : '此結果只代表端點回應，仍須送出測試。');
   });
-  $('#refresh').onclick = () => run(async () => { if (!acceptedOrigin || !ProjectCloud.enabled()) throw Error('請先發布並開啟 https://dalu.tw/acceptance/ 驗收。'); await ProjectCloud.refresh(); $('#status').textContent = '已重新讀取雲端；請核對收件編號。'; });
+  $('#refresh').onclick = () => run(async () => { if (!acceptedOrigin || !ProjectCloud.enabled()) throw Error('請先發布並開啟 https://dalu.tw/acceptance/ 驗收。'); await liveSync.refresh(); });
   $('#up-files').onchange = () => run(async () => {
     const files = [...$('#up-files').files]; form._media.items = []; $('#files').replaceChildren(); if (files.length > 10) throw Error('最多選擇 10 個附件。');
     const items = []; $('#send').disabled = true; $('#new-test').disabled = true; $('#up-files').disabled = true;
@@ -51,9 +51,22 @@ async function start() {
     if (!formValue(form, 'up-name').startsWith('驗收')) throw Error('測試署名請以「驗收」開頭，方便後續辨識。');
     if (!formValue(form, 'up-story') && !formValue(form, 'up-youtube') && !form._media.items.length) throw Error('請填寫文字或選擇附件。');
     $('#submission-fields').disabled = true; $('#form-error').textContent = '';
-    try { const result = await ProjectCloud.submit(form); $('#receipt').textContent = result.title + '\n' + result.message; }
+    try { const result = await ProjectCloud.submit(form); $('#receipt').textContent = result.title + '\n' + result.message; $('[data-file-status]', form).textContent = ''; await liveSync.refresh(); }
     finally { $('#submission-fields').disabled = false; }
   }); };
-  if (acceptedOrigin && ProjectCloud.enabled()) { await ProjectCloud.attach(form); await ProjectCloud.refresh(); }
+  if (acceptedOrigin && ProjectCloud.enabled()) {
+    liveSync = createAcceptanceSync({ read: () => ProjectCloud.refresh(), active: () => !document.hidden,
+      notify: ({ state, lastSuccess }) => {
+        const time = lastSuccess ? new Date(lastSuccess).toLocaleTimeString('zh-TW') : '尚無';
+        $('#sync-status').textContent = state === 'failed' ? `同步失敗，目前可能是舊資料；上次成功：${time}。請稍後重試。`
+          : state === 'loading' ? `正在同步雲端列表；上次成功：${time}。`
+          : `最後同步：${time}。每 10 秒更新；下架後會從公開列表移除。`;
+      } });
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) void liveSync.refresh(); });
+    window.addEventListener('focus', () => void liveSync.refresh());
+    window.addEventListener('pagehide', event => { if (!event.persisted) liveSync.stop(); });
+    // A slow challenge script must not block public list refresh.
+    void ProjectCloud.attach(form); await liveSync.refresh();
+  }
 }
 run(start);

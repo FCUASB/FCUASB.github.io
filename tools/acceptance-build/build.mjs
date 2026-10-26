@@ -10,7 +10,7 @@ const result = await build({ absWorkingDir: fileURLToPath(root), entryPoints: ['
   outfile: 'admin/app.js', write: false, legalComments: 'inline' });
 const outputs = result.outputFiles.map(output => ({ path: output.path, text: output.text }));
 outputs.push({ path: 'acceptance/app.js', text: '// Generated from the shared cloud client and acceptance/src/app.js.\n' +
-  (await readFile(new URL('handoff-v1.1/工程檔/cloud.js', root), 'utf8')).replaceAll('\r\n', '\n') + '\n' + (await readFile(new URL('acceptance/src/app.js', root), 'utf8')).replaceAll('\r\n', '\n') });
+  (await readFile(new URL('handoff-v1.1/工程檔/cloud.js', root), 'utf8')).replaceAll('\r\n', '\n') + '\n' + (await readFile(new URL('acceptance/src/sync.mjs', root), 'utf8')).replaceAll('\r\n', '\n').replace(/^export /gm, '') + '\n' + (await readFile(new URL('acceptance/src/app.js', root), 'utf8')).replaceAll('\r\n', '\n') });
 for (const output of outputs) {
   if (check) { if (await readFile(output.path, 'utf8') !== output.text) throw Error(`發布檔與來源不一致：${output.path}`); }
   else await writeFile(output.path, output.text);

@@ -1,9 +1,9 @@
 /* New cloud submissions only. Never reads or migrates IndexedDB records. */
 const ProjectCloud=(()=>{
- let challengeScript;
+ let challengeScript,refreshVersion=0,recordsFingerprint;
  const enabled=()=>CLOUD_CONFIG.enabled===true;
  async function request(endpoint,body){
-  const response=await fetch(endpoint,{method:body?'POST':'GET',credentials:'omit',redirect:'error',headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined,signal:AbortSignal.timeout(25000)});
+  const response=await fetch(endpoint,{method:body?'POST':'GET',credentials:'omit',redirect:'error',cache:'no-store',headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined,signal:AbortSignal.timeout(25000)});
   const data=await response.json();
   if(!response.ok){const messages={CHALLENGE_FAILED:'驗證已失效，請重新完成驗證後再送出。',RATE_LIMITED:'目前投稿較多，請稍後再試；填寫內容仍保留。',FILE_TOO_LARGE:'附件超過目前雲端單檔限制，請改貼 YouTube 連結或移除該附件。',INVALID_IDEMPOTENCY_KEY:'收件識別資料錯誤，請重新開啟表單。',INTAKE_NOT_READY:'雲端收件尚未啟用，內容尚未送出。'};throw new Error(messages[data.error]||'未確認雲端收件成功，內容仍保留，請稍後重試。')}
   return data;
@@ -31,8 +31,11 @@ const ProjectCloud=(()=>{
  }
  async function refresh(){
   if(!enabled())return;
+  const current=++refreshVersion;
   const records=[];let next=null;const seen=new Set();do{const query=next?'?'+new URLSearchParams(next):'';const page=await request(CLOUD_CONFIG.intakeEndpoint+query);if(!Array.isArray(page.records))throw Error('無法讀取雲端列表。');records.push(...page.records);next=page.next;if(next){const cursor=JSON.stringify(next);if(seen.has(cursor))throw Error('雲端列表分頁錯誤。');seen.add(cursor)}}while(next);
-  const hydrated=records.map(hydrate);for(let i=MEM.length-1;i>=0;i--)if(MEM[i].cloud)MEM.splice(i,1);
+  if(current!==refreshVersion)return;
+  const fingerprint=JSON.stringify(records);if(fingerprint===recordsFingerprint)return;
+  const hydrated=records.map(hydrate);recordsFingerprint=fingerprint;for(let i=MEM.length-1;i>=0;i--)if(MEM[i].cloud)MEM.splice(i,1);
   MEM.push(...hydrated);mem.order=null;renderMem();buildWall(true);
  }
  function fileMime(item){const file=item.original||item.blob;if(file.type)return file.type;const ext=item.name.split('.').pop().toLowerCase();return ({jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',gif:'image/gif',webp:'image/webp',heic:'image/heic',heif:'image/heif',mp4:'video/mp4',mov:'video/quicktime',webm:'video/webm'})[ext]||''}
