@@ -6,7 +6,7 @@
 | --- | ---: | --- |
 | 音樂會 | 42 | 已有 catalog 後台、角色權限、編輯、下架／恢復及版本紀錄 |
 | 大呂生平 | 1 份、21 個事件 | 已有 catalog 後台及版本紀錄 |
-| 原有回憶 | 25 | 本次已完成本機納管實作，正式資料尚未匯入 |
+| 原有回憶 | 25 | 已匯入正式 catalog；前端發布結果見本次 PR |
 | 新雲端投稿與附件 | 依正式收件資料 | 已有投稿管理流程；不得以靜態來源覆蓋 |
 | 訪客瀏覽器本機資料 | 各裝置不同 | 不自動搬移或上傳 |
 
@@ -56,4 +56,11 @@ content.json 另保留 19 筆 editorNotes 與 11 筆 researchGaps，屬整理及
 5. 發布本分支的後台及兩份首頁（existingMemoriesEnabled=true），等待 CI／Pages 成功，再由已登入管理員核對四分區與跨瀏覽器同步。不得先發布啟用設定而跳過資料與 API。
 6. 若回退前端，不回退或刪除已匯入的雲端紀錄；避免舊靜態首頁重新公開後台已下架的原文，應以關閉既有回憶顯示的版本回退。
 
-目前尚未套用正式差異 SQL、更新遠端函式、推送、合併或發布。
+## 2026-10-26 正式同步
+
+使用者回覆「sync」後，依上述順序執行。Supabase 連接器仍拒絕權限，改用已登入校友團帳號的 Dashboard；沒有繞過平台權限或讀取秘密。
+
+- 正式差異 SQL SHA256：`6C8C360EB74A4027831D7AA9DD7971FC77854A337AACE2D3954286BAFF38C51B`。交易成功後，以 25 筆 expected JSONB 逐欄比對：expected=25、imported=25、exact_originals=true；concerts_retained=43、biography_retained=1。
+- catalog 更新部署完成，發布檔 SHA256：`E9E780C5C3D22C13301CBF5C835C2FF819DEB659F99B95B08E360FDB302BF965`。未變更 JWT 設定、角色、秘密或其他函式。
+- 正式公開 GET 200：memories=25、managedMemoryIds=25、concerts=42、career=21。Node 深度比較 25 筆公開文件與本機原文一致；未登入 POST list memory=401，沒有建立測試投稿或修改任何原文。
+- 前後台發布、CI／Pages 及真人登入介面回驗接續於本次 PR 留存，不能把上述 API 成功替代正式介面驗收。
