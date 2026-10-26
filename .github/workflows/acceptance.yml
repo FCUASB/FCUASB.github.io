@@ -16,3 +16,4 @@ jobs:
       - run: npm ci --prefix tools/acceptance-build --ignore-scripts
       - run: npm run check --prefix tools/acceptance-build
       - run: npm test --prefix tools/acceptance-build
+      - run: npm run check:catalog --prefix tools/acceptance-build

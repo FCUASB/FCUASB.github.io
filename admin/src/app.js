@@ -1,6 +1,8 @@
+import { mountCatalog } from './catalog.js';
 import { createClient } from '@supabase/supabase-js';
 const $ = id => document.getElementById(id);
 const roleNames = { system_admin: '系統管理員', content_admin: '內容管理員', data_curator: '資料整理員' };
+let catalogUI;
 let client, config, session, profile, records = [], editing, cursor, generation = 0;
 // Read the link type before the Auth SDK consumes and clears its fragment.
 const linkType = new URLSearchParams(location.hash.slice(1)).get('type');
@@ -21,20 +23,23 @@ async function api(action, input = {}) {
   lifetime.throwIfAborted();
   if (error || !data.session) throw new Error('請重新登入。');
   session = data.session;
-  const response = await fetch(config.adminEndpoint, { method: 'POST', credentials: 'omit', redirect: 'error',
+  const catalogAction=action.startsWith('catalog.');
+  if(catalogAction&&(!config.catalogEnabled||!config.catalogEndpoint))throw Error('音樂會與生平管理尚未啟用。');
+  const response = await fetch(catalogAction?config.catalogEndpoint:config.adminEndpoint, { method: 'POST', credentials: 'omit', redirect: 'error',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}`, apikey: config.publishableKey },
-    body: JSON.stringify({ action, input }), signal: AbortSignal.any([lifetime, AbortSignal.timeout(20000)]) });
+    body: JSON.stringify({ action:catalogAction?action.slice(8):action, input }), signal: AbortSignal.any([lifetime, AbortSignal.timeout(20000)]) });
   const body = await response.json();
   lifetime.throwIfAborted();
   if (!response.ok) {
     if ([401, 403].includes(response.status)) clearPrivateUI();
     const messages = { ACCESS_DENIED: '沒有操作權限，請聯絡系統管理員。', LOGIN_REQUIRED: '登入已失效，請重新登入。',
-      EDIT_CONFLICT: '這筆資料已被其他人修改，請重新搜尋後再編輯。', ADMIN_NOT_READY: '後台尚未啟用。', INVALID_CHANGE: '變更不符合規則，請檢查欄位；不能停用最後一位系統管理員。' };
+      CATALOG_NOT_READY: '音樂會與生平管理尚未啟用。', INVALID_CONTENT: '請檢查必填欄位、日期及來源網址。', EDIT_CONFLICT: '這筆資料已被其他人修改，請重新讀取後再編輯；填寫內容仍保留。', ADMIN_NOT_READY: '後台尚未啟用。', INVALID_CHANGE: '變更不符合規則，請檢查欄位；不能停用最後一位系統管理員。' };
     throw new Error(messages[body.error] || '服務暫時無法完成操作。');
   }
   return body.result;
 }
 function clearPrivateUI() {
+  catalogUI?.clear();
   privateRequests.abort(); privateRequests = new AbortController();
   generation++; profile = null; records = []; editing = null; cursor = null;
   $('workspace').hidden = true; $('login-panel').hidden = false;
@@ -51,7 +56,7 @@ async function enter() {
   $('members-button').hidden = profile.role !== 'system_admin';
   $('audit-button').hidden = profile.role !== 'system_admin' || !config.auditEnabled;
   $('register-passkey').hidden = $('list-passkeys').hidden = !config.passkeysEnabled;
-  notice('已登入。'); await search();
+  catalogUI?.enter(); notice('已登入。'); await search();
 }
 async function search(next = false) {
   const current = ++generation;
@@ -166,6 +171,7 @@ async function start() {
   if (!config.enabled || !config.publishableKey) { notice('管理後台尚未接通服務，請由維護者完成設定。'); $('login-form').querySelectorAll('button').forEach(b => b.disabled = true); return; }
   if (!/^https:\/\//.test(config.supabaseUrl) || !config.publishableKey.startsWith('sb_publishable_')) throw new Error('公開設定格式錯誤；此處只能使用 publishable key。');
   client = createClient(config.supabaseUrl, config.publishableKey, { auth: { persistSession: false, autoRefreshToken: true, detectSessionInUrl: true, experimental: { passkey: !!config.passkeysEnabled } } });
+  catalogUI=mountCatalog({api,task,notice,getRole:()=>profile?.role,enabled:!!config.catalogEnabled});
   client.auth.onAuthStateChange((event) => {
     if (event === 'SIGNED_OUT') clearPrivateUI();
     if (event === 'PASSWORD_RECOVERY') { passwordSetup = true; showPasswordSetup(); }
