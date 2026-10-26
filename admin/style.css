@@ -3,3 +3,4 @@
 .content-sections{margin:20px 0}.content-sections button[aria-pressed=true]{background:#936a21}#catalog-edit-form{display:block}#catalog-edit-form label{margin:12px 0}#catalog-edit-form fieldset{border:1px solid #d9dfe3;min-width:0;margin:16px 0;padding:12px}#catalog-history pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:320px;overflow:auto}#biography-content p{white-space:pre-wrap}#submissions-panel{padding:0;border:0;background:transparent}
 
 .catalog-error{color:#982727;font-weight:600}
+#memory-results article>a{display:block;overflow-wrap:anywhere;margin:8px 0}
