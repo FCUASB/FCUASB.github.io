@@ -4,7 +4,7 @@ const ProjectCloud=(()=>{
  let challengeScript,refreshVersion=0,recordsFingerprint;
  const enabled=()=>CLOUD_CONFIG.enabled===true;
  async function request(endpoint,body){
-  const response=await fetch(endpoint,{method:body?'POST':'GET',credentials:'omit',redirect:'error',cache:'no-store',headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined,signal:AbortSignal.timeout(25000)});
+  let response;try{response=await fetch(endpoint,{method:body?'POST':'GET',credentials:'omit',redirect:'error',cache:'no-store',headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined,signal:AbortSignal.timeout(25000)})}catch{throw new Error('目前無法連線到網站，請確認網路後再試；填寫內容仍保留。')}
   const data=await response.json();
   if(!response.ok){const messages={CHALLENGE_FAILED:'驗證已失效，請重新完成驗證後再送出。',RATE_LIMITED:'目前投稿較多，請稍後再試；填寫內容仍保留。',FILE_TOO_LARGE:'附件超過目前雲端單檔限制，請改貼 YouTube 連結或移除該附件。',INVALID_IDEMPOTENCY_KEY:'收件識別資料錯誤，請重新開啟表單。',INTAKE_NOT_READY:'雲端收件尚未啟用，內容尚未送出。'};throw new Error(messages[data.error]||'未確認雲端收件成功，內容仍保留，請稍後重試。')}
   return data;
