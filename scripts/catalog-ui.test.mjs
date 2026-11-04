@@ -67,3 +67,24 @@ test('a save conflict keeps the editor and entered text, with an error inside th
   assert.match(p.all(form).find(n=>n.className==='catalog-error').textContent,/已被其他人修改/);
  }finally{p.restore();}
 });
+
+test('automatic catalog reads update the active section and preserve unchanged nodes and draft filters',async()=>{
+ let records=[record];const p=setup(async()=>structuredClone(records));try{
+  await p.get('section-concert').onclick();const original=p.get('concert-results').children[0];
+  await p.ui.refresh();assert.equal(p.get('concert-results').children[0],original);
+  p.get('concert-query').value='unsubmitted draft';records=[{...record,revision:2,document:{...record.document,title:'Updated by another administrator'}}];
+  await p.ui.refresh();assert.match(p.all(p.get('concert-results')).map(n=>n.textContent).join(' '),/Updated by another administrator/);
+  assert.equal(p.get('concert-query').value,'unsubmitted draft');
+  await p.get('concert-search').onsubmit({preventDefault(){}});assert.match(p.all(p.get('concert-results')).map(n=>n.textContent).join(' '),/沒有符合/);
+ }finally{p.restore();}
+});
+
+test('a background catalog response cannot redraw an editor opened during the read',async()=>{
+ let deliver;let loading=false;const p=setup(()=>loading?new Promise(resolve=>{deliver=resolve;}):Promise.resolve([record]));try{
+  await p.get('section-concert').onclick();loading=true;const pending=p.ui.refresh();
+  await p.all(p.get('concert-results')).find(n=>n.textContent==='編輯').onclick();
+  const form=p.get('catalog-edit-form'),title=p.all(form).find(n=>n.tagName==='label'&&n.textContent==='音樂會名稱').children[0];title.value='Draft';
+  deliver([{...record,revision:2,document:{...record.document,title:'External edit'}}]);assert.equal(await pending,false);
+  assert.equal(p.get('catalog-edit-dialog').open,true);assert.equal(title.value,'Draft');
+ }finally{p.restore();}
+});
