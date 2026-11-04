@@ -518,26 +518,20 @@ form input[type=email],form input[type=tel],form input[type=url]{font:inherit;fo
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script>
-// One in-flight read, visible pages only; failed reads never claim freshness.
-function createAcceptanceSync({ read, notify, active = () => true, intervalMs = 10000,
-  setTimer = setTimeout, clearTimer = clearTimeout, now = () => new Date().toISOString() }) {
-  let timer, pending, stopped = false, lastSuccess = null;
-  function schedule() {
-    if (stopped) return;
-    timer = setTimer(() => { timer = null; if (active()) void refresh(); else schedule(); }, intervalMs);
-  }
+// Explicit reads only, one in flight; failed reads never claim freshness.
+function createAcceptanceSync({ read, notify, now = () => new Date().toISOString() }) {
+  let pending, stopped = false, lastSuccess = null;
   function refresh() {
     if (stopped) return Promise.resolve();
     if (pending) return pending;
-    if (timer != null) { clearTimer(timer); timer = null; }
     notify({ state: 'loading', lastSuccess });
     pending = Promise.resolve().then(read).then(() => {
       if (!stopped) { lastSuccess = now(); notify({ state: 'ready', lastSuccess }); }
     }, () => { if (!stopped) notify({ state: 'failed', lastSuccess }); })
-      .finally(() => { pending = null; schedule(); });
+      .finally(() => { pending = null; });
     return pending;
   }
-  return { refresh, stop() { stopped = true; if (timer != null) clearTimer(timer); } };
+  return { refresh, stop() { stopped = true; } };
 }
 
 /* Platform-neutral connection helpers. No connection is made during initialization. */
@@ -628,6 +622,9 @@ const CLOUD_CONFIG={"enabled":true,"intakeEndpoint":"https://rikgchswpjaxlnhdrxt
 const ProjectCloud=(()=>{
  let challengeScript,refreshVersion=0,recordsFingerprint;
  const enabled=()=>CLOUD_CONFIG.enabled===true;
+ function uploadLimit(){const value=CLOUD_CONFIG.maxUploadBytes;return Number.isSafeInteger(value)&&value>0?value:50*1048576}
+ function uploadLimitLabel(){return (uploadLimit()/1048576).toLocaleString('zh-TW',{maximumFractionDigits:2})+' MB'}
+ function validateFileSize(file,name=file.name){if(file.size>uploadLimit())throw new Error('「'+(name||'附件')+'」超過單檔 '+uploadLimitLabel()+' 限制，請縮小檔案或改貼 YouTube 影片連結。')}
  async function request(endpoint,body){
   let response;try{response=await fetch(endpoint,{method:body?'POST':'GET',credentials:'omit',redirect:'error',cache:'no-store',headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined,signal:AbortSignal.timeout(25000)})}catch{throw new Error('目前無法連線到網站，請確認網路後再試；填寫內容仍保留。')}
   const data=await response.json();
@@ -667,6 +664,7 @@ const ProjectCloud=(()=>{
  function fileMime(item){const file=item.original||item.blob;if(file.type)return file.type;const ext=item.name.split('.').pop().toLowerCase();return ({jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',gif:'image/gif',webp:'image/webp',heic:'image/heic',heif:'image/heif',mp4:'video/mp4',mov:'video/quicktime',webm:'video/webm'})[ext]||''}
  async function submit(form){
   const value=id=>formValue(form,id),items=form._media.items;
+  for(const item of items)validateFileSize(item.original||item.blob,item.name);
   if(!form._challengeToken)throw new Error('請先完成投稿驗證。');
   const data={name:value('up-name'),body:value('up-story'),year:value('up-y')?Number(value('up-y')):null,month:$('#up-mo',form).selectedIndex||null,place:value('up-pl'),relationship:value('up-rel'),email:value('up-email'),phone:value('up-phone'),youtubeId:youtubeId(value('up-youtube')),consent:!!$('#up-consent',form)?.checked,
    uploads:items.map(item=>({name:item.name,mimeType:fileMime(item),size:(item.original||item.blob).size,width:item.w,height:item.h}))};
@@ -694,8 +692,8 @@ const ProjectCloud=(()=>{
   const record=MEM.find(m=>m.cloudId===receipt.id);
   return {cloud:true,title:failures?'文字已收到，部分附件未收到':'投稿已收到',message:'收件編號：'+receipt.id+'。'+(failures?failures+' 個附件未完成上傳；如有填寫聯絡資料，管理員可後續聯繫。':'內容已保存在網站雲端，Drive 歸檔會另行處理。')+(listUpdated?'':'目前無法更新列表，請稍後重新整理。'),kind:record?'memory':'report',id:record?.id};
  }
- async function prepareFile(file,type){if(type!=='photo')return {blob:file,w:400,h:300};const url=objectURL(file);try{return await new Promise(resolve=>{const image=new Image();const timer=setTimeout(()=>resolve({blob:file,w:400,h:300}),10000);image.onload=()=>{clearTimeout(timer);resolve({blob:file,w:image.naturalWidth||400,h:image.naturalHeight||300})};image.onerror=()=>{clearTimeout(timer);resolve({blob:file,w:400,h:300})};image.src=url})}finally{releaseURL(url)}}
- return {enabled,fields,attach,dispose,refresh,submit,prepareFile};
+ async function prepareFile(file,type){validateFileSize(file);if(type!=='photo')return {blob:file,w:400,h:300};const url=objectURL(file);try{return await new Promise(resolve=>{const image=new Image();const timer=setTimeout(()=>resolve({blob:file,w:400,h:300}),10000);image.onload=()=>{clearTimeout(timer);resolve({blob:file,w:image.naturalWidth||400,h:image.naturalHeight||300})};image.onerror=()=>{clearTimeout(timer);resolve({blob:file,w:400,h:300})};image.src=url})}finally{releaseURL(url)}}
+ return {enabled,fields,attach,dispose,refresh,submit,prepareFile,uploadLimitLabel,validateFileSize};
 })();
 
 function validateCatalogDocument(kind, raw) {
@@ -905,8 +903,8 @@ function renumber(box){$$('[data-rep]',box).forEach((r,i)=>$('[data-no]',r).text
 const uploadHTML=()=>`<form class="dlg simple-upload" id="f-up" novalidate>${closeX}<h2 id="up-h">留下我與大呂的回憶</h2><p class="lead">一句想念、一張照片、一段影片，都可以。</p>
  <div class="row"><label for="up-name">您的稱呼 <small>${ProjectCloud.enabled()?'必填，會公開顯示':'選填'}</small></label><input type="text" id="up-name" autocomplete="name" ${ProjectCloud.enabled()?'required':''} placeholder="${ProjectCloud.enabled()?'姓名或暱稱':'姓名或暱稱，留白則匿名'}"></div>
  <div class="row"><label for="up-story">想對大呂說的話 <small>選填</small></label><textarea id="up-story" rows="3" placeholder="大呂，還記得……"></textarea></div>
- <div class="row"><label class="media-pick" for="up-files"><span aria-hidden="true">＋</span> 加入照片／影片<span class="hint">可多選，也可以只留文字</span><input type="file" id="up-files" multiple accept="image/*,video/*"></label><div class="files" id="up-list" aria-live="polite"></div></div>
- <details class="upload-extra"><summary>補充年份、地點（選填）</summary>${relChoices('up')}<div class="two"><div class="row"><label for="up-y">年份</label><input type="number" id="up-y" min="1977" max="${new Date().getFullYear()}" inputmode="numeric" placeholder="不確定可留白"></div><div class="row"><label for="up-mo">月份</label><select id="up-mo"><option value="">不確定</option>${Array.from({length:12},(_,i)=>`<option>${i+1} 月</option>`).join('')}</select></div></div><div class="row"><label for="up-pl">地點</label><input type="text" id="up-pl" placeholder="例如：排練教室"></div><p class="hint">${ProjectCloud.enabled()?'單檔最多 50MB，超過限制的附件會顯示失敗；長影片建議貼 YouTube 連結。與 YouTube 合計最多 10 個附件。':'照片每張 25MB、影片每支 300MB 以內，最多 10 個。'}HEIC 與 MOV 需瀏覽器支援。</p></details>
+ <div class="row"><label class="media-pick" for="up-files"><span aria-hidden="true">＋</span> 加入照片／影片<span class="hint">可多選，也可以只留文字${ProjectCloud.enabled()?'<br>單檔最多 '+ProjectCloud.uploadLimitLabel():''}</span><input type="file" id="up-files" multiple accept="image/*,video/*" aria-describedby="up-file-limits up-file-error"></label><p class="hint" id="up-file-limits">${ProjectCloud.enabled()?'照片、影片單檔最多 '+ProjectCloud.uploadLimitLabel()+'；與 YouTube 連結合計最多 10 個附件。超過上限請縮小檔案，或改填下方的 YouTube 影片連結。':'照片每張 25MB、影片每支 300MB 以內，最多 10 個檔案。'}</p><p class="form-error" id="up-file-error" data-file-error role="alert" hidden></p><div class="files" id="up-list" aria-live="polite"></div></div>
+ <details class="upload-extra"><summary>補充年份、地點（選填）</summary>${relChoices('up')}<div class="two"><div class="row"><label for="up-y">年份</label><input type="number" id="up-y" min="1977" max="${new Date().getFullYear()}" inputmode="numeric" placeholder="不確定可留白"></div><div class="row"><label for="up-mo">月份</label><select id="up-mo"><option value="">不確定</option>${Array.from({length:12},(_,i)=>`<option>${i+1} 月</option>`).join('')}</select></div></div><div class="row"><label for="up-pl">地點</label><input type="text" id="up-pl" placeholder="例如：排練教室"></div><p class="hint">${ProjectCloud.enabled()?'單檔最多 '+ProjectCloud.uploadLimitLabel()+'，超過時請縮小檔案或改貼 YouTube 連結。與 YouTube 合計最多 10 個附件。':'照片每張 25MB、影片每支 300MB 以內，最多 10 個。'}HEIC 與 MOV 需瀏覽器支援。</p></details>
  ${ProjectCloud.fields()}<p class="upload-note">${ProjectCloud.enabled()?'投稿文字及可用附件會公開；電話與 Email 不公開。':'請分享您有權使用的內容。此版先儲存在您的瀏覽器。'}</p><button class="btn gold" type="submit" id="up-send" style="width:100%">留下這份回憶</button></form>`;
 
 const concertHTML=()=>`<form class="dlg" id="f-con" novalidate>${closeX}<h2 id="ac-h">新增音樂會</h2><p class="lead">先留下你記得的演出與曲目。</p>${DEMO}
@@ -1019,10 +1017,11 @@ function fileType(file){if(file.type.startsWith('image/')||/\.(jpe?g|png|heic|he
 async function compressImage(file){const url=objectURL(file);try{const image=await new Promise((resolve,reject)=>{const image=new Image();image.onload=()=>resolve(image);image.onerror=()=>reject(new Error('無法讀取「'+file.name+'」，請改用 JPG、PNG 或 WebP。'));image.src=url});const scale=Math.min(1,1600/Math.max(image.naturalWidth,image.naturalHeight));const w=Math.max(1,Math.round(image.naturalWidth*scale)),h=Math.max(1,Math.round(image.naturalHeight*scale));const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;const ctx=canvas.getContext('2d');if(!ctx)throw new Error('目前無法處理圖片。');ctx.fillStyle='#fff';ctx.fillRect(0,0,w,h);ctx.drawImage(image,0,0,w,h);const blob=await new Promise((resolve,reject)=>canvas.toBlob(blob=>blob?resolve(blob):reject(new Error('圖片處理失敗。')),'image/jpeg',.85));return {blob,w,h}}finally{releaseURL(url)}}
 function renderFileRows(form){const state=form._media,list=$('.files',form);if(!list)return;list.innerHTML=state.items.map((item,index)=>`<div class="file"><div class="pv">${item.type==='video'?`<video src="${esc(item.url)}" muted playsinline preload="metadata"></video>`:`<img src="${esc(item.url)}" alt="照片預覽 ${index+1}">`}</div><div style="min-width:0"><div class="nm">${esc(item.name)}</div><div class="hint">${(item.blob.size/1048576).toFixed(1)} MB · 已準備好</div></div><button class="media-remove" type="button" data-remove-file="${index}" aria-label="移除${esc(item.name)}">移除</button></div>`).join('')}
 function formError(form,text){let error=$('[data-form-error]',form);if(!error){error=document.createElement('p');error.className='form-error';error.dataset.formError='';error.setAttribute('role','alert');form.querySelector('[type=submit]').before(error)}error.textContent=text;error.hidden=!text}
-async function fileRows(input,list,unused){const form=input.form,state=form._media;if(!state)return;const files=[...input.files];input.value='';formError(form,'');if(!files.length)return;if(files.length+state.items.length>10){formError(form,'一則回憶最多 10 個檔案，請先移除部分附件。');return}if(files.some(file=>!fileType(file))){formError(form,'請選擇照片或影片檔案。');return}if(form.id!=='f-up'&&files.some(file=>fileType(file)!=='photo')){formError(form,'音樂會附件請選擇照片或節目冊圖片。');return}const large=ProjectCloud.enabled()&&form.id==='f-up'?null:files.find(file=>file.size>(fileType(file)==='video'?300:25)*1048576);if(large){formError(form,'「'+large.name+'」超過檔案大小限制。');return}
+function fileError(form,text){let error=$('[data-file-error]',form);if(!error){error=document.createElement('p');error.className='form-error';error.dataset.fileError='';error.setAttribute('role','alert');$('.files',form).before(error)}error.textContent=text;error.hidden=!text;if(text)error.scrollIntoView({block:'nearest'})}
+async function fileRows(input,list,unused){const form=input.form,state=form._media;if(!state)return;const files=[...input.files];input.value='';formError(form,'');fileError(form,'');if(!files.length)return;if(files.length+state.items.length>10){fileError(form,'一則回憶最多 10 個檔案，請先移除部分附件。');return}if(files.some(file=>!fileType(file))){fileError(form,'請選擇照片或影片檔案。');return}if(form.id!=='f-up'&&files.some(file=>fileType(file)!=='photo')){fileError(form,'音樂會附件請選擇照片或節目冊圖片。');return}if(ProjectCloud.enabled()&&form.id==='f-up'){try{for(const file of files)ProjectCloud.validateFileSize(file)}catch(error){fileError(form,error.message);return}}else{const large=files.find(file=>file.size>(fileType(file)==='video'?300:25)*1048576);if(large){fileError(form,'「'+large.name+'」超過檔案大小限制。');return}}
  const version=++state.version;const button=$('[type=submit]',form);state.busy=true;button.disabled=true;list.setAttribute('aria-busy','true');const status=$('[data-file-status]',form);status.textContent='正在準備檔案，照片會自動縮小……';const prepared=[];
  try{for(const file of files){const type=fileType(file);const image=ProjectCloud.enabled()&&form.id==='f-up'?await ProjectCloud.prepareFile(file,type):type==='photo'?await compressImage(file):{blob:file,w:400,h:300};if(state.disposed||version!==state.version)return;prepared.push({name:file.name,type,...image,original:file})}if(state.disposed||version!==state.version)return;state.items.push(...prepared.map(item=>({...item,url:objectURL(item.blob)})));renderFileRows(form);status.textContent=`${state.items.length} 個檔案已準備好。`}
- catch(error){if(!state.disposed&&version===state.version){formError(form,error.message||'檔案準備失敗，請重新選擇。');status.textContent=state.items.length?'先前選取的檔案仍保留。':''}}
+ catch(error){if(!state.disposed&&version===state.version){fileError(form,error.message||'檔案準備失敗，請重新選擇。');status.textContent=state.items.length?'先前選取的檔案仍保留。':''}}
  finally{if(!state.disposed&&version===state.version){state.busy=false;button.disabled=false;list.removeAttribute('aria-busy')}}
 }
 function collectRows(form){return $$('[data-rep]',form).flatMap(row=>{const value=suffix=>$(`input[id*="-${suffix}"]`,row)?.value.trim()||'';const zh=value('zh'),orig=value('or'),composer=value('co'),arr=value('ar'),note=value('nt');if(!zh&&!orig&&!composer&&!arr&&!note)return [];if(!zh&&!orig)throw new Error('填寫曲目時，請至少留下中文或原文名稱。');return [{zh,orig,composer,arr,note,src:$('select',row).selectedIndex===1?P:M,local:true}]})}
@@ -1097,18 +1096,16 @@ lt.addEventListener('keydown',e=>{if(e.target.closest('video,iframe'))return;if(
 async function startHomepageCloud(){
  if(!ProjectCloud.enabled())return;
  const status=$('#cloud-sync-status');
- const sync=createAcceptanceSync({active:()=>!document.hidden,read:async()=>{
+ const sync=createAcceptanceSync({read:async()=>{
   const previous=MEM.find(m=>m.id===ltId&&m.cloud);
   await Promise.all([ProjectCloud.refresh(),...(typeof ProjectCatalog==='undefined'?[]:[ProjectCatalog.refresh()])]);
   storageState.albumIds=storageState.albumIds.filter(id=>MEM.some(m=>m.id===id));
   if(previous&&lt.open){const current=MEM.find(m=>m.id===previous.id);if(!current){lt.close();toast('這則投稿已下架。')}else if(JSON.stringify(previous)!==JSON.stringify(current))drawLight()}
  },notify:({state,lastSuccess})=>{
   const time=lastSuccess?new Date(lastSuccess).toLocaleTimeString('zh-TW'):'尚無';
-  status.textContent=state==='failed'?`暫時無法同步，畫面可能是舊資料。上次成功：${time}。`:state==='loading'?`正在同步親友投稿；上次成功：${time}。`:`親友投稿最後同步：${time}。每 10 秒更新。`;
+  status.textContent=state==='failed'?`暫時無法同步，畫面可能是舊資料。上次成功：${time}。`:state==='loading'?`正在同步親友投稿；上次成功：${time}。`:`親友投稿最後同步：${time}。按「重新讀取投稿」取得最新資料。`;
  }});
  $('#cloud-refresh').onclick=()=>void sync.refresh();
- document.addEventListener('visibilitychange',()=>{if(!document.hidden)void sync.refresh()});
- addEventListener('focus',()=>void sync.refresh());
  addEventListener('pagehide',event=>{if(!event.persisted)sync.stop()});
  await sync.refresh();
  if(location.hash.startsWith('#m-'))route();

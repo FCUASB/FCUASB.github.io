@@ -6,7 +6,7 @@
 
 - 根目錄與 /handoff-v1.1/ 使用同一份來源。新回憶投稿直接經 Turnstile 與現有 intake/media API 收件；署名公開，電話與 Email 選填且不公開。
 - 支援純文字、照片、影片檔、YouTube 連結，合計最多 10 個附件。單檔 50MB；附件失敗時保留已收到的文字與收件編號。Drive 歸檔仍另行處理。
-- 開啟頁面與切回分頁時讀取，頁面可見時每 10 秒輪詢。同步失敗明示畫面可能是舊資料。下架後移除公開列表，若相簿開啟中則關閉；編輯則重繪該相簿。
+- 頁面載入時讀取一次；之後僅手動更新或投稿後更新，不定時輪詢，也不因切回分頁或視窗而讀取。同步失敗明示畫面可能是舊資料。下架後移除公開列表，若相簿開啟中則關閉；編輯則重繪該相簿。
 - 舊 IndexedDB 內容只在原瀏覽器顯示，不會自動上傳。新增音樂會、補充與檢舉仍是本機內容，表單保留提示，不能視為送交管理員。
 - 不調整資料庫、角色、秘密、後端功能開關或來源白名單；正式來源沿用 https://dalu.tw。
 
@@ -22,8 +22,14 @@ localhost 不在正式 CORS/Turnstile hostname 來源內，預覽同步失敗屬
 
 ## 維護與復原
 
-編輯 handoff-v1.1/工程檔/，執行 npm run build 並提交兩份 HTML；npm run check 與 npm run test:home 應通過。acceptance/src/sync.mjs 是共用輪詢器，變更後也需重建驗收頁。
+編輯 handoff-v1.1/工程檔/，執行 npm run build 並提交兩份 HTML；npm run check 與 npm run test:home 應通過。acceptance/src/sync.mjs 是共用請求控制器，變更後也需重建驗收頁。
 
 前端可關閉 cloud-config.json 的 enabled 並重建，或以 PR revert 這批提交。這不刪除已收到的雲端投稿，也不會清除訪客本機資料。
 
 參考：[Turnstile 尺寸](https://developers.cloudflare.com/turnstile/get-started/client-side-rendering/widget-configurations/)、[Supabase CORS](https://supabase.com/docs/guides/functions/cors)。
+
+## 2026-10-31 按需讀取調整
+
+首頁與獨立驗收頁已取消定時輪詢、分頁可見及視窗焦點觸發的讀取。初次載入、手動重新讀取及投稿後更新仍保留；其他使用者的編輯與下架須重新讀取才反映。這只減少背景 API 請求，不保證解決附件下載造成的流量超額。
+
+本機 build、build:acceptance、check、check:acceptance 與 test:home（9 項）通過。HTTP 預覽服務已啟動，但瀏覽器連線 localhost:8000 逾時，因此未完成 360／390／430px、桌面及真實後端／投稿／影音驗收。該次驗證未部署。

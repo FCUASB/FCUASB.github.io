@@ -1,4 +1,5 @@
 import { mountCatalog } from './catalog.js';
+import { createAdminSync } from './sync.mjs';
 import { createClient } from '@supabase/supabase-js';
 const $ = id => document.getElementById(id);
 const roleNames = { system_admin: '系統管理員', content_admin: '內容管理員', data_curator: '資料整理員' };
@@ -9,6 +10,7 @@ const linkType = new URLSearchParams(location.hash.slice(1)).get('type');
 let passwordSetup = ['invite', 'recovery'].includes(linkType);
 let privateRequests = new AbortController();
 let auditCursor = null;
+let adminSync, tasks = 0, searchInput = { query: '', filter: 'all' }, recordsFingerprint, archiveFingerprint;
 function showPasswordSetup() {
   clearPrivateUI(); $('login-panel').hidden = true; $('recovery-panel').hidden = false;
   notice(linkType === 'invite' ? '邀請已驗證，請自行設定管理員密碼。' : '請設定新密碼。');
@@ -16,16 +18,36 @@ function showPasswordSetup() {
 function notice(message, error = false) { $('status').textContent = message; $('status').classList.toggle('error', error); }
 function el(tag, text, className) { const node = document.createElement(tag); if (text != null) node.textContent = text; if (className) node.className = className; return node; }
 function button(text, action, className) { const node = el('button', text, className); node.type = 'button'; node.addEventListener('click', () => task(action, node)); return node; }
-async function task(fn, target) { if (target) target.disabled = true; try { await fn(); } catch (error) { notice(error.message || '操作失敗，請重試。', true); } finally { if (target) target.disabled = false; } }
+async function task(fn, target) { tasks++; if (target) target.disabled = true; try { await fn(); } catch (error) { notice(error.message || '操作失敗，請重試。', true); } finally { tasks--; if (target) target.disabled = false; } }
+function canSync() {
+  return !!profile && !document.hidden && !tasks && !$('edit-dialog').open && !$('catalog-edit-dialog').open;
+}
+function startSync() {
+  adminSync?.stop();
+  adminSync = createAdminSync({ canRead: canSync,
+    read: async () => {
+      const applied = $('submissions-panel').hidden ? await catalogUI.refresh() : await search(false, { background: true });
+      if (applied !== false && canSync() && !$('archive-panel').hidden) await showArchive({ background: true });
+      return applied;
+    },
+    notify: ({ state, lastSuccess }) => {
+      const time = lastSuccess ? new Date(lastSuccess).toLocaleTimeString('zh-TW') : '尚無';
+      $('admin-sync-status').textContent = state === 'failed' ? `自動同步失敗，畫面可能是舊資料；稍後自動重試。上次成功：${time}。`
+        : state === 'paused' ? `暫緩自動同步；回到分頁或完成編輯後會繼續。上次成功：${time}。`
+        : state === 'loading' ? `正在同步最新資料。上次成功：${time}。`
+        : `每 5 秒自動同步；最後成功：${time}。`;
+    } });
+  void adminSync.refresh();
+}
 async function api(action, input = {}) {
   const lifetime = privateRequests.signal;
   const { data, error } = await client.auth.getSession();
   lifetime.throwIfAborted();
-  if (error || !data.session) throw new Error('請重新登入。');
+  if (error || !data.session) { clearPrivateUI(); throw new Error('請重新登入。'); }
   session = data.session;
   const catalogAction=action.startsWith('catalog.');
   if(catalogAction&&(!config.catalogEnabled||!config.catalogEndpoint))throw Error('音樂會與生平管理尚未啟用。');
-  const response = await fetch(catalogAction?config.catalogEndpoint:config.adminEndpoint, { method: 'POST', credentials: 'omit', redirect: 'error',
+  const response = await fetch(catalogAction?config.catalogEndpoint:config.adminEndpoint, { method: 'POST', credentials: 'omit', redirect: 'error', cache: 'no-store',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}`, apikey: config.publishableKey },
     body: JSON.stringify({ action:catalogAction?action.slice(8):action, input }), signal: AbortSignal.any([lifetime, AbortSignal.timeout(20000)]) });
   const body = await response.json();
@@ -39,6 +61,7 @@ async function api(action, input = {}) {
   return body.result;
 }
 function clearPrivateUI() {
+  adminSync?.stop(); adminSync = null; recordsFingerprint = archiveFingerprint = undefined; searchInput = { query: '', filter: 'all' };
   catalogUI?.clear();
   privateRequests.abort(); privateRequests = new AbortController();
   generation++; profile = null; records = []; editing = null; cursor = null;
@@ -47,6 +70,7 @@ function clearPrivateUI() {
   $('recovery-form').reset(); $('member-form').reset();
   for (const id of ['results', 'members', 'passkeys', 'archive-summary', 'archive-failures', 'audit-results']) $(id).replaceChildren();
   $('edit-dialog').close(); $('edit-form').reset(); $('identity').textContent = '請登入校友團授權的管理員帳號。';
+  $('admin-sync-status').textContent = ''; $('submission-count').textContent = '';
 }
 async function enter() {
   profile = await api('profile');
@@ -56,18 +80,27 @@ async function enter() {
   $('members-button').hidden = profile.role !== 'system_admin';
   $('audit-button').hidden = profile.role !== 'system_admin' || !config.auditEnabled;
   $('register-passkey').hidden = $('list-passkeys').hidden = !config.passkeysEnabled;
-  catalogUI?.enter(); notice('已登入。'); await search();
+  catalogUI?.enter(); notice('已登入。'); await search(); startSync();
 }
-async function search(next = false) {
+async function search(next = false, { background = false } = {}) {
   const current = ++generation;
-  const input = { query: $('query').value.trim(), filter: $('filter').value, ...(next && cursor ? cursor : {}) };
-  const data = await api('search', input); if (generation !== current) return;
-  records = data; $('results').replaceChildren();
-  if (!data.length) $('results').append(el('p', '沒有符合條件的投稿。'));
-  for (const record of data) renderRecord(record);
+  const input = background ? { ...searchInput } : { query: $('query').value.trim(), filter: $('filter').value, ...(next && cursor ? cursor : {}) };
+  const data = await api('search', input); if (generation !== current) return false;
+  if (!Array.isArray(data)) throw Error('無法讀取投稿資料。');
+  if (background && (!canSync() || $('submissions-panel').hidden)) return false;
+  const fingerprint = JSON.stringify(data);
+  if (!background || recordsFingerprint !== fingerprint) {
+    records = data; $('results').replaceChildren();
+    if (!data.length) $('results').append(el('p', '沒有符合條件的投稿。'));
+    for (const record of data) renderRecord(record);
+    recordsFingerprint = fingerprint;
+  }
+  searchInput = input;
   const last = data.at(-1); cursor = last ? { before: last.createdAt, beforeId: last.id } : null;
   $('next-page').hidden = data.length < 100;
-  notice(`本頁 ${data.length} 筆。`);
+  $('submission-count').textContent = `本頁 ${data.length} 筆。`;
+  if (!background) notice('已讀取投稿。');
+  return true;
 }
 function renderRecord(record) {
   const article = el('article'); article.append(el('h2', record.name), el('small', `${record.year || '年份未填'} · ${record.deletedAt ? '已下架' : '公開中'}`),
@@ -142,8 +175,12 @@ async function showMembers() {
   }));
   $('members-panel').hidden = false;
 }
-async function showArchive() {
+async function showArchive({ background = false } = {}) {
   const result = await api('archive_status');
+  if (background && (!canSync() || $('archive-panel').hidden)) return;
+  const fingerprint = JSON.stringify(result);
+  if (background && archiveFingerprint === fingerprint) return;
+  archiveFingerprint = fingerprint;
   const labels = { pending: '等待', running: '進行中', completed: '完成', failed: '失敗' };
   $('archive-summary').textContent = Object.entries(result.counts || {}).map(([state, count]) => `${labels[state] || state}：${count}`).join(' · ') || '尚無歸檔工作。';
   $('archive-failures').replaceChildren();
@@ -172,6 +209,10 @@ async function start() {
   if (!/^https:\/\//.test(config.supabaseUrl) || !config.publishableKey.startsWith('sb_publishable_')) throw new Error('公開設定格式錯誤；此處只能使用 publishable key。');
   client = createClient(config.supabaseUrl, config.publishableKey, { auth: { persistSession: false, autoRefreshToken: true, detectSessionInUrl: true, experimental: { passkey: !!config.passkeysEnabled } } });
   catalogUI=mountCatalog({api,task,notice,getRole:()=>profile?.role,enabled:!!config.catalogEnabled});
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) void adminSync?.refresh(); });
+  window.addEventListener('focus', () => { void adminSync?.refresh(); });
+  window.addEventListener('pagehide', () => { adminSync?.stop(); });
+  window.addEventListener('pageshow', event => { if (event.persisted && profile) startSync(); });
   client.auth.onAuthStateChange((event) => {
     if (event === 'SIGNED_OUT') clearPrivateUI();
     if (event === 'PASSWORD_RECOVERY') { passwordSetup = true; showPasswordSetup(); }
