@@ -4,6 +4,8 @@
 
 ## 維護入口
 
+第一次接手可先讀 [專案導覽：入口、檔案與互動流程](docs/PROJECT-GUIDE.md)，快速了解三個頁面入口、來源與發布檔的關係、各項互動的程式位置，以及雲端／本機資料的差別。
+
 連線與資料接口見 [接入說明](docs/CONNECTION.md)。正式首頁已接通 Supabase 新回憶投稿；舊瀏覽器 IndexedDB 不會自動上傳。補充、檢舉及訪客新增音樂會仍使用本機流程。
 
 Supabase 專案、GCP Drive API、服務帳號及 OAuth 準備步驟見 [雲端設定指南](docs/CLOUD-SETUP.md)。歷史設定文件需搭配 [最新進度](docs/CLOUD-PROGRESS.md) 閱讀。
@@ -46,7 +48,7 @@ npm run serve
 
 ## 首頁雲端接入
 
-正式首頁的新回憶投稿已於 2026-10-26 透過 PR #9 接入 Supabase，包含每 10 秒同步與下架更新。行為、驗證限制與復原方式見 [接入說明](docs/HOMEPAGE-CLOUD.md)。使用 Node.js 24，執行 npm run build、npm run check、npm run test:home。既有本機內容不會自動上傳；其他補充與檢舉仍是本機資料。
+正式首頁的新回憶投稿已於 2026-10-26 透過 PR #9 接入 Supabase，目前於頁面載入、手動更新及投稿後讀取資料；下架更新須重新讀取後才反映。行為、驗證限制與復原方式見 [接入說明](docs/HOMEPAGE-CLOUD.md)。使用 Node.js 24，執行 npm run build、npm run check、npm run test:home。既有本機內容不會自動上傳；其他補充與檢舉仍是本機資料。
 
 
 ## 音樂會與大呂生平管理

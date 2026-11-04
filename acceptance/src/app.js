@@ -55,15 +55,13 @@ async function start() {
     finally { $('#submission-fields').disabled = false; }
   }); };
   if (acceptedOrigin && ProjectCloud.enabled()) {
-    liveSync = createAcceptanceSync({ read: () => ProjectCloud.refresh(), active: () => !document.hidden,
+    liveSync = createAcceptanceSync({ read: () => ProjectCloud.refresh(),
       notify: ({ state, lastSuccess }) => {
         const time = lastSuccess ? new Date(lastSuccess).toLocaleTimeString('zh-TW') : '尚無';
         $('#sync-status').textContent = state === 'failed' ? `同步失敗，目前可能是舊資料；上次成功：${time}。請稍後重試。`
           : state === 'loading' ? `正在同步雲端列表；上次成功：${time}。`
-          : `最後同步：${time}。每 10 秒更新；下架後會從公開列表移除。`;
+          : `最後同步：${time}。請手動重新讀取以查看編輯與下架更新。`;
       } });
-    document.addEventListener('visibilitychange', () => { if (!document.hidden) void liveSync.refresh(); });
-    window.addEventListener('focus', () => void liveSync.refresh());
     window.addEventListener('pagehide', event => { if (!event.persisted) liveSync.stop(); });
     // A slow challenge script must not block public list refresh.
     void ProjectCloud.attach(form); await liveSync.refresh();

@@ -20,10 +20,20 @@ test('a removed cloud memory closes its open album without deleting browser reco
  await p.context.start();assert.equal(p.context.lt.open,false);
  assert.equal(p.context.MEM[0].local,true);assert.equal(p.context.storageState.albumIds.length,1);
 });
-test('unchanged polls keep the open player; edited posts redraw and failed sync is explicit',async()=>{
+test('unchanged reads keep the open player; edited posts redraw and failed sync is explicit',async()=>{
  const p=page();await p.context.start();assert.equal(p.context.draws,0);
  p.context.ProjectCloud.refresh=async()=>{p.context.MEM[0]={...p.context.MEM[0],story:'edited'}};
  await p.config.read();assert.equal(p.context.draws,1);
  p.config.notify({state:'failed',lastSuccess:null});assert.match(p.status.textContent,/可能是舊資料/);
- p.context.document.hidden=true;assert.equal(p.config.active(),false);
+ assert.equal(p.events.visibilitychange,undefined);assert.equal(p.events.focus,undefined);
+});
+
+test('homepage reads cloud and catalog on load and on explicit refresh only',async()=>{
+ const p=page();let reads=0,catalogReads=0;
+ p.context.ProjectCloud.refresh=async()=>{reads++};
+ p.context.ProjectCatalog={refresh:async()=>{catalogReads++}};
+ await p.context.start();assert.equal(reads,1);assert.equal(catalogReads,1);
+ await p.button.onclick();await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(reads,2);assert.equal(catalogReads,2);
+ assert.equal(p.events.visibilitychange,undefined);assert.equal(p.events.focus,undefined);
 });
