@@ -21,7 +21,8 @@ const uploadHTML=()=>`<form class="dlg simple-upload" id="f-up" novalidate>${clo
 
 const concertHTML=()=>`<form class="dlg" id="f-con" novalidate>${closeX}<h2 id="ac-h">新增音樂會</h2><p class="lead">先留下你記得的演出與曲目。</p>${DEMO}
  <div class="row"><label for="ac-t">音樂會名稱</label><input type="text" id="ac-t" required></div>
- <div class="two"><div class="row"><label for="ac-d">演出日期 <small>不確定請填大約日期</small></label><input type="date" id="ac-d" required></div><div class="row"><label for="ac-tm">演出時間 <small>選填</small></label><input type="time" id="ac-tm"></div></div>
+ <div class="two"><div class="row"><label for="ac-d">演出年份／日期</label><input type="text" id="ac-d" required maxlength="10" placeholder="2008、2008-05 或 2008-05-18" aria-describedby="ac-date-hint"><p class="hint" id="ac-date-hint">只記得年份或月份也可以，請勿補上不確定的月日。</p></div><div class="row"><label for="ac-tm">演出時間 <small>選填</small></label><input type="time" id="ac-tm"></div></div>
+ <div class="row"><label for="ac-date-note">日期待核對註記 <small>選填</small></label><input type="text" id="ac-date-note" placeholder="例如：可能是暑假，確切日期待查節目冊"></div>
  <div class="two"><div class="row"><label for="ac-p">演出地點</label><input type="text" id="ac-p" required></div><div class="row"><label for="ac-e">演出團體</label><input type="text" id="ac-e" required></div></div>
  <div class="two"><div class="row"><label for="ac-c">指揮</label><input type="text" id="ac-c"></div><div class="row"><label for="ac-h2">主辦單位 <small>選填</small></label><input type="text" id="ac-h2"></div></div>
  <div class="row"><span class="lab">海報、節目冊與照片 <small>選填，可多選</small></span><div class="drop"><input type="file" id="ac-files" multiple accept="image/*"><span class="hint">音樂會海報、節目冊封面與內頁、演出或排練照片</span></div><div class="files" id="ac-list"></div></div>
@@ -30,7 +31,7 @@ const concertHTML=()=>`<form class="dlg" id="f-con" novalidate>${closeX}<h2 id="
  <div class="row"><label for="ac-n">您的姓名</label><input type="text" id="ac-n" required autocomplete="name"></div>${consent('ac-ok')}
  <button class="btn gold" type="submit" style="width:100%">儲存音樂會</button></form>`;
 
-const contribHTML=c=>`<form class="dlg" id="f-ct" novalidate>${closeX}<h2 id="ct-h">補充這場音樂會的資料</h2><p class="lead">${esc(c.title)}（${fmtDate(c.date)}）</p>${DEMO}
+const contribHTML=c=>`<form class="dlg" id="f-ct" novalidate>${closeX}<h2 id="ct-h">補充這場音樂會的資料</h2><p class="lead">${esc(c.title)}（${esc(c.dateLabel||fmtDate(c.date))}）</p>${DEMO}
  <div class="row"><span class="lab">你想補充什麼？</span><div class="choices">${['遺漏的曲目','演出照片','節目冊','演出者資訊','其他回憶'].map((t,i)=>`<label><input type="checkbox" value="${t}" ${i===0?'checked':''}>${t}</label>`).join('')}</div></div>
  ${repBlock('ct')}
  <div class="row"><span class="lab">照片或節目冊 <small>選填</small></span><div class="drop"><input type="file" id="ct-files" multiple accept="image/*"></div><div class="files" id="ct-list"></div></div>

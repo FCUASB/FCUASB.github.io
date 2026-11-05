@@ -826,6 +826,64 @@ function validateCatalogDocument(kind, raw) {
   return doc;
 }
 
+/* Private browser additions stay separate from the current public catalog. */
+const ProjectLocalConcerts=(()=>{
+ const records=new Map(),hydrated=new Map(),seedIds=new Set(ARCHIVE.concerts.map(c=>c.id));
+ let published=ARCHIVE.concerts;
+ const isSupplement=r=>r.recordType==='concert-supplement'||r.recordType!=='local-concert'&&(seedIds.has(r.id)||!!r.source||!!r.sourceNote||!r.createdAt&&!!r.updatedAt);
+ function supplement(record){
+  if(record?.recordType==='concert-supplement')return record;
+  return {id:record?.id,recordType:'concert-supplement',targetDate:record?.date,
+   rows:(record?.rows||[]).filter(r=>r.local),media:record?.media||[],notes:record?.notes||[],
+   ...(record?{legacySnapshot:record}:{})};
+ }
+ function mergeRows(previous,added){
+  const rows=previous.map(r=>({...r}));
+  for(const row of added){const index=rows.findIndex(r=>workKey(r)===workKey(row));
+   if(index<0)rows.push({...row});
+   else{const old=rows[index];rows[index]={...old,...row,zh:old.zh||row.zh,orig:old.orig||row.orig,composer:old.composer||row.composer,arr:old.arr||row.arr,note:[old.note,row.note].filter(Boolean).join('；')};}
+  }
+  return rows;
+ }
+ function remember(record){
+  const old=hydrated.get(record.id);
+  for(const item of old?.media||[]){releaseURL(item.url);releaseURL(item.poster);}
+  records.set(record.id,record);hydrated.delete(record.id);
+ }
+ function rebuild(){
+  const next=new Map(published.map(c=>[c.id,{...c,catalogManaged:true,poster:ASSETS[c.asset]?.url||ASSETS['lu-portrait'].url,rows:c.rows.map((r,i)=>({...r,no:i+1}))}]));
+  for(const record of records.values()){
+   const personal=isSupplement(record),data=personal?supplement(record):record;
+   if(!hydrated.has(record.id))hydrated.set(record.id,personal?{...data,media:hydrateMedia(data.media)}:hydrateConcert(data));
+   const local=hydrated.get(record.id);
+   if(!personal){next.set(record.id,{...local});continue;}
+   const current=next.get(record.id),date=data.targetDate||'';
+   next.set(record.id,{...(current||{id:record.id,title:'已停止公開的音樂會｜我的本機補充',date,year:date?Number(date.slice(0,4)):null,place:'',ens:'',cond:'',story:'',rows:[],status:'unavailable',catalogManaged:true,unavailable:true,poster:ASSETS['lu-portrait'].url,imageLabel:'呂彥慶指揮資料照（非該場演出照片）'}),
+    hasLocalSupplement:true,personalRows:local.rows,personalMedia:local.media,personalNotes:local.notes});
+  }
+  CON.splice(0,CON.length,...next.values());
+ }
+ function prepareSupplement(existing,{rows,media,notes}){
+  if(existing.unavailable)throw Error('這場音樂會已停止公開，填寫內容仍保留在此表單。');
+  const previous=records.get(existing.id);
+  const base=existing.local&&!existing.catalogManaged?persistableConcert(existing):supplement(previous);
+  return {...base,id:existing.id,...(existing.catalogManaged||!existing.local?{recordType:'concert-supplement',targetDate:existing.date}:{recordType:'local-concert'}),
+   rows:mergeRows(base.rows||[],rows),media:[...(base.media||[]),...media],notes:[...(base.notes||[]),...notes],updatedAt:Date.now()};
+ }
+ return {
+  load(items,supplements=[]){for(const record of [...items,...supplements])remember(record);rebuild();},
+  publish(items){published=items;rebuild();},
+  saved(record){remember(record);rebuild();},
+  prepareSupplement
+ };
+})();
+
+function localConcertDate(date,note=''){
+ if(!/^\d{4}(?:-(?:0[1-9]|1[0-2])(?:-(?:0[1-9]|[12]\d|3[01]))?)?$/.test(date)||Number(date.slice(0,4))<1977||Number(date.slice(0,4))>3000||date.length===10&&new Date(date+'T00:00:00Z').toISOString().slice(0,10)!==date)throw Error('請填寫 1977 年起的年份、年月或完整日期，例如 2008、2008-05、2008-05-18。');
+ const partial=date.length<10;
+ return {date,year:Number(date.slice(0,4)),...(partial||note?{status:'date-pending',dateLabel:fmtDate(date)+'（'+(note||'演出日期待核對')+'）',sourceNote:note}:{})};
+}
+
 /* Public catalog only; no credentials or local content are sent. */
 const ProjectCatalog=(()=>{
  let fingerprint,loaded=false,version=0;
@@ -853,13 +911,11 @@ const ProjectCatalog=(()=>{
    const next=JSON.stringify(result);
    if(next!==fingerprint){
     const viewed=J.view==='concert'?CON.find(c=>c.id===J.id):null;
-    const locals=CON.filter(c=>c.local),localIds=new Set(locals.map(c=>c.id));
-    const hydrated=concerts.filter(c=>!localIds.has(c.id)).map(c=>({...c,poster:ASSETS[c.asset]?.url||ASSETS['lu-portrait'].url,rows:c.rows.map((r,i)=>({...r,no:i+1}))}));
-    CON.splice(0,CON.length,...hydrated,...locals);
+    ProjectLocalConcerts.publish(concerts);
     ARCHIVE.biography=biography.biography;ARCHIVE.biographyMore=biography.biographyMore;ARCHIVE.career=biography.career;
     $('#catalog-biography').textContent=biography.biography;$('#catalog-biography-more').textContent=biography.biographyMore;
     renderCareer();refreshConcerts();
-    if(viewed&&!viewed.local){const current=CON.find(c=>c.id===viewed.id);if(!current){showList();toast('這場音樂會已下架。')}else if(JSON.stringify(current)!==JSON.stringify(viewed))showConcert(current.id)}
+    if(viewed&&!viewed.local){const current=CON.find(c=>c.id===viewed.id);if(!current||current.unavailable){showList();toast('這場音樂會已下架。'+(current?.hasLocalSupplement?'您的本機補充仍保留。':''))}else if(JSON.stringify(current)!==JSON.stringify(viewed))showConcert(current.id)}
     if(memories){
      const viewedMemory=MEM.find(m=>m.id===ltId&&m.managed);
      const retained=MEM.filter(m=>m.local||m.cloud);
@@ -979,7 +1035,8 @@ const uploadHTML=()=>`<form class="dlg simple-upload" id="f-up" novalidate>${clo
 
 const concertHTML=()=>`<form class="dlg" id="f-con" novalidate>${closeX}<h2 id="ac-h">新增音樂會</h2><p class="lead">先留下你記得的演出與曲目。</p>${DEMO}
  <div class="row"><label for="ac-t">音樂會名稱</label><input type="text" id="ac-t" required></div>
- <div class="two"><div class="row"><label for="ac-d">演出日期 <small>不確定請填大約日期</small></label><input type="date" id="ac-d" required></div><div class="row"><label for="ac-tm">演出時間 <small>選填</small></label><input type="time" id="ac-tm"></div></div>
+ <div class="two"><div class="row"><label for="ac-d">演出年份／日期</label><input type="text" id="ac-d" required maxlength="10" placeholder="2008、2008-05 或 2008-05-18" aria-describedby="ac-date-hint"><p class="hint" id="ac-date-hint">只記得年份或月份也可以，請勿補上不確定的月日。</p></div><div class="row"><label for="ac-tm">演出時間 <small>選填</small></label><input type="time" id="ac-tm"></div></div>
+ <div class="row"><label for="ac-date-note">日期待核對註記 <small>選填</small></label><input type="text" id="ac-date-note" placeholder="例如：可能是暑假，確切日期待查節目冊"></div>
  <div class="two"><div class="row"><label for="ac-p">演出地點</label><input type="text" id="ac-p" required></div><div class="row"><label for="ac-e">演出團體</label><input type="text" id="ac-e" required></div></div>
  <div class="two"><div class="row"><label for="ac-c">指揮</label><input type="text" id="ac-c"></div><div class="row"><label for="ac-h2">主辦單位 <small>選填</small></label><input type="text" id="ac-h2"></div></div>
  <div class="row"><span class="lab">海報、節目冊與照片 <small>選填，可多選</small></span><div class="drop"><input type="file" id="ac-files" multiple accept="image/*"><span class="hint">音樂會海報、節目冊封面與內頁、演出或排練照片</span></div><div class="files" id="ac-list"></div></div>
@@ -988,7 +1045,7 @@ const concertHTML=()=>`<form class="dlg" id="f-con" novalidate>${closeX}<h2 id="
  <div class="row"><label for="ac-n">您的姓名</label><input type="text" id="ac-n" required autocomplete="name"></div>${consent('ac-ok')}
  <button class="btn gold" type="submit" style="width:100%">儲存音樂會</button></form>`;
 
-const contribHTML=c=>`<form class="dlg" id="f-ct" novalidate>${closeX}<h2 id="ct-h">補充這場音樂會的資料</h2><p class="lead">${esc(c.title)}（${fmtDate(c.date)}）</p>${DEMO}
+const contribHTML=c=>`<form class="dlg" id="f-ct" novalidate>${closeX}<h2 id="ct-h">補充這場音樂會的資料</h2><p class="lead">${esc(c.title)}（${esc(c.dateLabel||fmtDate(c.date))}）</p>${DEMO}
  <div class="row"><span class="lab">你想補充什麼？</span><div class="choices">${['遺漏的曲目','演出照片','節目冊','演出者資訊','其他回憶'].map((t,i)=>`<label><input type="checkbox" value="${t}" ${i===0?'checked':''}>${t}</label>`).join('')}</div></div>
  ${repBlock('ct')}
  <div class="row"><span class="lab">照片或節目冊 <small>選填</small></span><div class="drop"><input type="file" id="ct-files" multiple accept="image/*"></div><div class="files" id="ct-list"></div></div>
@@ -1023,21 +1080,27 @@ function drawLight(){const m=MEM.find(x=>x.id===ltId);if(!m)return;const ids=sto
  let visual=media?(media.youtube?videoPlayer({youtube:media.youtube,n:m.n}):media.type==='video'?ProjectVideo.player(media,m.n):`<img src="${esc(media.url)}" alt="${esc(m.n)}">`):m.type==='text'?`<div class="text-sheet">${esc(m.story)}</div>`:m.type==='video'?videoPlayer(m):`<img src="${esc(m.src)}" alt="${esc(m.n)}">`;
  lt.innerHTML=`<div class="lt"><div class="lt-stage ${m.type==='text'?'text-stage':''}">${visual}<button class="lt-nav prev" type="button" aria-label="上一則回憶" data-step="-1">‹</button><button class="lt-nav next" type="button" aria-label="下一則回憶" data-step="1">›</button></div><div class="lt-info"><button class="x" type="button" aria-label="關閉相簿" data-close>×</button><p class="eyebrow" style="color:var(--gold)">Memory ${index} ／ ${ids.length}</p><h2>${esc(m.n)}</h2><p class="m">${m.y?esc(dateTxt(m))+' ・ ':''}${esc(m.place||m.rel)}</p>${m.type!=='text'?`<p class="story">${esc(m.story)}</p>`:''}<p class="m">${m.cloud?'已保存在網站雲端。'+(m.pendingAttachments?' '+m.pendingAttachments+' 個附件處理中。':''):m.local?'這則內容儲存在您的瀏覽器。':sourceLink(m.source,m.sourceName)}</p>${m.sourceNote?`<p class="m">${esc(m.sourceNote)}</p>`:''}${m.youtube?`<p class="m">${sourceLink('https://www.youtube.com/watch?v='+m.youtube,'在 YouTube 觀看')}</p>`:''}<div class="acts">${likeHTML(m)}<button type="button" data-share-memory="${m.id}">分享連結</button><button type="button" data-open="report">更正資料</button></div></div>${m.media?.length>1?`<div class="lt-thumbs">${m.media.map((a,i)=>`<button type="button" data-attachment="${i}" aria-pressed="${i===storageState.attachment}">${a.type==='video'?'影片':'照片'} ${i+1}</button>`).join('')}</div>`:''}</div>`;
 }
-function renderStats(){const ys=ARCHIVE.career.map(c=>Math.floor(c.timelineOrder/10000)).filter(Number.isFinite),ensembles=new Set(CON.flatMap(c=>c.ens.split('、').map(s=>s.trim())));$('#stats').innerHTML=[[CON.length,'演出／活動紀錄（筆）'],[worksIndex().length,'作品索引（筆）'],[CON.reduce((n,c)=>n+c.rows.length,0),'曲目資料（含原定節目）'],[ensembles.size,'演出團體（個）'],[ys.length?Math.min(...ys)+'－'+Math.max(...ys):'年代待整理','音樂生涯足跡']].map(([a,b])=>`<div><b>${a}</b><span>${b}</span></div>`).join('')}
-function card(c){return `<button type="button" class="card" data-con="${c.id}"><img class="thumb" src="${esc(c.poster)}" width="84" height="112" alt="${esc(c.imageLabel||c.title)}" loading="lazy"><span><h3>${esc(c.title)}</h3><span class="meta">${esc(c.dateLabel||fmtDate(c.date))}<br>${esc(c.place)}<br>${esc(c.ens)}<br>${c.role?esc(c.role)+'｜':''}指揮：${esc(c.cond)}<br>${c.rows.length?'已收錄曲目 '+c.rows.length+' 首':'演出紀錄'}</span><span>${c.status==='cancelled'?'<span class="badge need">已取消</span>':c.status==='planned'?'<span class="badge">行前計畫</span>':''}${c.local?'<span class="badge">我的補充</span>':''}${c.need?'<span class="badge need">歡迎補充曲目</span>':''}</span></span></button>`}
+function renderStats(){const active=CON.filter(c=>!c.unavailable),ys=ARCHIVE.career.map(c=>Math.floor(c.timelineOrder/10000)).filter(Number.isFinite),ensembles=new Set(active.flatMap(c=>c.ens.split('、').map(s=>s.trim())));$('#stats').innerHTML=[[active.length,'演出／活動紀錄（筆）'],[worksIndex().length,'作品索引（筆）'],[active.reduce((n,c)=>n+c.rows.length,0),'曲目資料（含原定節目）'],[ensembles.size,'演出團體（個）'],[ys.length?Math.min(...ys)+'－'+Math.max(...ys):'年代待整理','音樂生涯足跡']].map(([a,b])=>`<div><b>${a}</b><span>${b}</span></div>`).join('')}
+function card(c){if(c.unavailable)return `<button type="button" class="card" data-con="${c.id}"><span><h3>${esc(c.title)}</h3><span class="meta">原場次已停止公開，僅保留個人曲目、圖片與文字。</span><span class="badge">僅此瀏覽器的補充</span></span></button>`;return `<button type="button" class="card" data-con="${c.id}"><img class="thumb" src="${esc(c.poster)}" width="84" height="112" alt="${esc(c.imageLabel||c.title)}" loading="lazy"><span><h3>${esc(c.title)}</h3><span class="meta">${esc(c.dateLabel||fmtDate(c.date))}<br>${esc(c.place)}<br>${esc(c.ens)}<br>${c.role?esc(c.role)+'｜':''}指揮：${esc(c.cond)}<br>${c.rows.length?'已收錄曲目 '+c.rows.length+' 首':'演出紀錄'}</span><span>${c.status==='cancelled'?'<span class="badge need">已取消</span>':c.status==='planned'?'<span class="badge">行前計畫</span>':''}${c.local||c.hasLocalSupplement?'<span class="badge">僅此瀏覽器的補充</span>':''}${c.need?'<span class="badge need">歡迎補充曲目</span>':''}</span></span></button>`}
 function showConcert(id){const c=CON.find(x=>x.id===id);if(!c)return;J.view='concert';J.id=id;$('#jList').hidden=true;const d=$('#jDetail');ProjectVideo.stop(d);d.hidden=false;
+ if(c.unavailable){d.innerHTML=`<button class="back" type="button" data-back>← 回到音樂足跡</button><h2>${esc(c.title)}</h2><p class="hint">原音樂會已停止公開。以下只保留您在此瀏覽器的補充，尚未送達網站管理員。</p>${personalConcertHTML(c)}`;scrollTo({top:$('#journey').offsetTop,behavior:'instant'});return;}
  const images=[...(c.gallery||[c.asset]).filter(Boolean).map(key=>({url:ASSETS[key]?.url,name:ASSETS[key]?.label||c.imageLabel,source:ASSETS[key]?.source})),...(c.media||[])];
- d.innerHTML=`<button class="back" type="button" data-back>← 回到音樂足跡</button><div class="detail-top"><img class="poster" src="${esc(c.poster)}" alt="${esc(c.imageLabel||c.title)}"><div><p class="eyebrow">${c.year}</p><h2 style="font-size:clamp(1.5rem,3.4vw,2.1rem);letter-spacing:.05em">${esc(c.title)}</h2><dl class="dl"><dt>演出日期</dt><dd>${esc(c.dateLabel||fmtDate(c.date))}</dd>${c.time?`<dt>演出時間</dt><dd>${esc(c.time)}</dd>`:''}<dt>演出地點</dt><dd>${esc(c.place)}</dd><dt>演出團體</dt><dd>${esc(c.ens)}</dd><dt>指揮</dt><dd>${esc(c.cond)}</dd>${c.role?`<dt>大呂的身分</dt><dd>${esc(c.role)}</dd>`:''}${c.status?`<dt>紀錄狀態</dt><dd>${esc(({cancelled:'已取消，曲目為原定節目',planned:'行前計畫，實際演出待核','date-pending':'演出日期待核對'})[c.status]||c.status)}</dd>`:''}${c.host?`<dt>主辦單位</dt><dd>${esc(c.host)}</dd>`:''}<dt>紀錄來源</dt><dd>${c.source?(c.sources||[c.source]).map((url,i)=>sourceLink(url,i?'補充來源 '+i:c.sourceName)).join(' · '):(c.local?'本機新增':'來源待核對')}</dd></dl><div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:18px"><button class="btn" type="button" data-contrib="${c.id}">補充這場音樂會的資料</button><button class="btn ghost" type="button" data-open="report">回報錯誤</button></div></div></div><p style="margin-top:28px;white-space:pre-line">${esc(c.story)}</p>${c.sourceNote?'<p class="hint">'+esc(c.sourceNote)+'</p>':''}
+ d.innerHTML=`<button class="back" type="button" data-back>← 回到音樂足跡</button><div class="detail-top"><img class="poster" src="${esc(c.poster)}" alt="${esc(c.imageLabel||c.title)}"><div><p class="eyebrow">${c.year}</p><h2 style="font-size:clamp(1.5rem,3.4vw,2.1rem);letter-spacing:.05em">${esc(c.title)}</h2><dl class="dl"><dt>演出日期</dt><dd>${esc(c.dateLabel||fmtDate(c.date))}</dd>${c.time?`<dt>演出時間</dt><dd>${esc(c.time)}</dd>`:''}<dt>演出地點</dt><dd>${esc(c.place)}</dd><dt>演出團體</dt><dd>${esc(c.ens)}</dd><dt>指揮</dt><dd>${esc(c.cond)}</dd>${c.role?`<dt>大呂的身分</dt><dd>${esc(c.role)}</dd>`:''}${c.status?`<dt>紀錄狀態</dt><dd>${esc(({cancelled:'已取消，曲目為原定節目',planned:'行前計畫，實際演出待核','date-pending':'演出日期待核對'})[c.status]||c.status)}</dd>`:''}${c.host?`<dt>主辦單位</dt><dd>${esc(c.host)}</dd>`:''}<dt>紀錄來源</dt><dd>${c.source?(c.sources||[c.source]).map((url,i)=>sourceLink(url,i?'補充來源 '+i:c.sourceName)).join(' · '):(c.local?'本機新增':'來源待核對')}</dd></dl><div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:18px"><button class="btn" type="button" data-contrib="${c.id}">補充這場音樂會的資料</button><button class="btn ghost" type="button" data-open="report">回報錯誤</button></div></div></div>${c.local||c.hasLocalSupplement?'<p class="hint">您的新增內容與補充只保存在此瀏覽器，尚未送達網站管理員。</p>':''}<p style="margin-top:28px;white-space:pre-line">${esc(c.story)}</p>${c.sourceNote?'<p class="hint">'+esc(c.sourceNote)+'</p>':''}
  <h3 class="sub-h">${c.status==='cancelled'||c.status==='planned'?'原定曲目':'曲目紀錄'}</h3>${c.rows.length?`<div class="table-wrap"><table><thead><tr><th>#</th><th>曲目</th><th>作曲／原公告署名</th><th>編曲</th><th>資料來源</th></tr></thead><tbody>${c.rows.map((r,i)=>`<tr><td class="n">${i+1}</td><td>${c.status||c.role==='指揮身分待核對'?`<span>${esc(r.zh||r.orig)}</span>`:`<button type="button" class="back" style="min-height:0;padding:0;text-align:left;color:var(--ink);font-weight:500" data-work="${esc(workKey(r))}">${esc(r.zh||r.orig)}</button>`}${r.orig&&r.zh?`<span class="o">${esc(r.orig)}</span>`:''}</td><td>${esc(r.composer)||'來源未載'}</td><td>${esc(r.arr)||'—'}</td><td>${r.local?'本機補充':sourceLink(r.source||c.source,'來源')}</td></tr>`).join('')}</tbody></table></div>`:'<p class="hint">歡迎用節目冊或演出紀錄補上這場音樂會的曲目。</p>'}${c.rowsNote?`<p class="hint" style="margin-top:12px">${esc(c.rowsNote)}</p>`:''}
  <h3 class="sub-h">節目影像與照片</h3><div class="gallery">${images.map(a=>`<figure><img src="${esc(a.url)}" alt="${esc(a.name||'演出附件')}" loading="lazy"><figcaption>${esc(a.name||'演出附件')} ${sourceLink(a.source,'來源')}</figcaption></figure>`).join('')}</div>
- ${(c.videoIds?.length||c.externalVideo)?`<h3 class="sub-h">演出影片</h3>${(c.videoIds||[]).map(y=>videoPlayer({youtube:y,title:c.title})).join('')}${c.externalVideo?videoPlayer({...c,src:c.poster}):''}`:''}<h3 class="sub-h">這場音樂會，你最難忘的是什麼？</h3>${c.notes?.length?c.notes.map(n=>`<div class="con-note">${esc(n.text)}<small>— ${esc(n.author)}</small></div>`).join(''):'<p class="hint">把你記得的排練、舞台與相遇，留在這裡。</p>'}`;scrollTo({top:$('#journey').offsetTop,behavior:'instant'});
+ ${(c.videoIds?.length||c.externalVideo)?`<h3 class="sub-h">演出影片</h3>${(c.videoIds||[]).map(y=>videoPlayer({youtube:y,title:c.title})).join('')}${c.externalVideo?videoPlayer({...c,src:c.poster}):''}`:''}${personalConcertHTML(c)}<h3 class="sub-h">這場音樂會，你最難忘的是什麼？</h3>${c.notes?.length?c.notes.map(n=>`<div class="con-note">${esc(n.text)}<small>— ${esc(n.author)}</small></div>`).join(''):'<p class="hint">把你記得的排練、舞台與相遇，留在這裡。</p>'}`;scrollTo({top:$('#journey').offsetTop,behavior:'instant'});
+}
+function personalConcertHTML(c){
+ if(!c.hasLocalSupplement)return '';
+ const rows=c.personalRows||[],media=c.personalMedia||[],notes=c.personalNotes||[];
+ return `<section class="personal-concert"><h3 class="sub-h">我的本機補充</h3><p class="hint">以下內容僅您在此瀏覽器可見，尚未送達管理員；與網站公開紀錄分開保存。</p>${rows.length?`<div class="table-wrap"><table><thead><tr><th>曲目</th><th>作曲</th><th>編曲</th><th>補充註記</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${esc(r.zh||r.orig)}${r.zh&&r.orig?`<span class="o">${esc(r.orig)}</span>`:''}</td><td>${esc(r.composer)||'待補充'}</td><td>${esc(r.arr)||'—'}</td><td>${esc(r.note)}<br>${r.src==='program'?'投稿者標示有節目冊，待核對':'參與者回憶，待核對'}</td></tr>`).join('')}</tbody></table></div>`:''}<div class="gallery">${media.map(a=>`<figure><img src="${esc(a.url)}" alt="${esc(a.name||'本機補充附件')}" loading="lazy"><figcaption>${esc(a.name||'本機補充附件')} · 僅此瀏覽器</figcaption></figure>`).join('')}</div>${notes.map(n=>`<div class="con-note">${esc(n.text)}<small>— ${esc(n.author)} · 本機補充</small></div>`).join('')}</section>`;
 }
 function renderCareer(){const el=$('#careerBody');if(el)el.innerHTML=ARCHIVE.career.map(r=>`<article class="career-item"><time>${esc(r.label)}</time><div><h3>${esc(r.title)}</h3><p>${esc(r.description)}</p>${sourceLink(r.source,'資料來源')+(r.sourceNote?'<p class="hint">'+esc(r.sourceNote)+'</p>':'')}</div></article>`).join('')}
 function yearLabel(label){const m=/^(\d{4})\.(\d{1,2}\.\d{1,2})$/.exec(label);return m?`<span class="year-main">${m[1]}</span> <span class="year-md">${m[2]}</span>`:esc(label)}
 function renderJ(){
  if(J.tab!=='timeline'){renderWorksOriginal();return}
  const q=J.q.trim().toLowerCase();
- const events=CON.filter(c=>(!q||conHay(c).includes(q))&&(J.flt==='all'||c.need)).map(c=>({group:String(c.year),order:c.timelineOrder||Number(c.date.replaceAll('-','').padEnd(8,'0')),html:card(c)}));
+ const events=CON.filter(c=>(!q||conHay(c).includes(q))&&(J.flt==='all'||c.need)).map(c=>({group:String(c.year||'年份待核對'),order:c.timelineOrder||(c.date?Number(c.date.replaceAll('-','').padEnd(8,'0')):Number.MAX_SAFE_INTEGER),html:card(c)}));
  const career=J.flt==='all'?ARCHIVE.career.filter(r=>!q||[r.label,r.title,r.description].join(' ').toLowerCase().includes(q)).map(r=>({group:r.label,order:r.timelineOrder,html:`<article class="career-card"><span class="badge">音樂生涯</span><h3>${esc(r.title)}</h3><p>${esc(r.description)}</p>${sourceLink(r.source,'資料來源')+(r.sourceNote?'<p class="hint">'+esc(r.sourceNote)+'</p>':'')}</article>`})):[];
  const entries=[...career,...events].sort((a,b)=>J.dir==='asc'?a.order-b.order:b.order-a.order);
  const groups=[];for(const item of entries){let group=groups.at(-1);if(!group||group.label!==item.group)groups.push(group={label:item.group,items:[]});group.items.push(item.html)}
@@ -1080,7 +1143,7 @@ function memList(){let list=MEM.slice();const q=mem.q.trim().toLowerCase();if(q)
 function openMem(id){ltId=id;storageState.attachment=0;storageState.albumIds=memList().map(m=>m.id);if(!storageState.albumIds.includes(id))storageState.albumIds=MEM.map(m=>m.id);drawLight();if(!lt.open)lt.showModal();syncModalState()}
 function step(direction){const list=storageState.albumIds.length?storageState.albumIds:MEM.map(m=>m.id);const index=list.indexOf(ltId);ltId=list[(index+direction+list.length)%list.length];storageState.attachment=0;drawLight()}
 
-function refreshConcerts(){renderStats();renderJ();$('#previewCards').innerHTML=CON.slice().sort((a,b)=>b.date.localeCompare(a.date)).slice(0,3).map(card).join('')}
+function refreshConcerts(){renderStats();renderJ();$('#previewCards').innerHTML=CON.filter(c=>!c.unavailable).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,3).map(card).join('')}
 function route(){ProjectVideo.stop($('#jDetail'));const hash=location.hash.slice(1),journey=hash==='journey';$('#home').hidden=journey;$('#journey').hidden=!journey;$('#nav-home').setAttribute('aria-current',journey?'false':'page');$('#nav-journey').setAttribute('aria-current',journey?'page':'false');if(journey){renderStats();showList()}if(hash.startsWith('m-')){const id=Number(hash.slice(2));if(MEM.some(m=>m.id===id))openMem(id)}else if(lt.open)lt.close();if(!hash.startsWith('m-'))scrollTo({top:0,behavior:'instant'})}
 
 function fileType(file){if(file.type.startsWith('image/')||/\.(jpe?g|png|heic|heif|webp|gif)$/i.test(file.name))return 'photo';if(file.type.startsWith('video/')||/\.(mp4|mov|webm)$/i.test(file.name))return 'video';return null}
@@ -1098,6 +1161,7 @@ function collectRows(form){return $$('[data-rep]',form).flatMap(row=>{const valu
 function rawMedia(form){return form._media.items.map(({blob,type,name,w,h,posterBlob})=>({blob,type,name,w,h,posterBlob}))}
 function formValue(form,id){return $('#'+id,form)?.value.trim()||''}
 function persistableConcert(c){return {...c,poster:undefined,progImg:undefined,media:(c.media||[]).map(a=>a.blob?(({url,...rest})=>rest)(a):a),rows:c.rows.map(r=>({...r})),notes:(c.notes||[]).map(n=>({...n}))}}
+function saveConcertRecord(record){return record.recordType==='concert-supplement'?saveRecord('settings',{...record,id:'concert-supplement:'+record.id,concertId:record.id}):saveRecord('concerts',record)}
 async function submitLocal(form,name,arg){
  const value=id=>formValue(form,id),media=rawMedia(form);
  if(name==='upload'){
@@ -1106,10 +1170,10 @@ async function submitLocal(form,name,arg){
   await saveRecord('memories',record);MEM.forEach(m=>m.isNew=false);MEM.unshift({...hydrateMemory(record),isNew:true});mem.sort='latest';mem.type='all';mem.q='';mem.shown=8;mem.order=null;$('#memQ').value='';$$('[data-sort]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.sort==='latest'));$$('[data-mem-type]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.memType==='all'));renderMem();buildWall(true);return {title:'回憶已儲存',message:'這份回憶已加入此瀏覽器的回憶牆。',kind:'memory',id:record.id};
  }
  if(name==='concert'){
-  const date=value('ac-d');if(!/^\d{4}-\d{2}-\d{2}$/.test(date))throw new Error('請填寫演出日期。');const record={id:newId(),title:value('ac-t'),date,year:Number(date.slice(0,4)),time:value('ac-tm'),place:value('ac-p'),ens:value('ac-e'),cond:value('ac-c'),host:value('ac-h2'),rows:collectRows(form),story:value('ac-s'),author:value('ac-n'),media,notes:[],sample:false,local:true,createdAt:Date.now()};await saveRecord('concerts',record);CON.push(hydrateConcert(record));refreshConcerts();return {title:'音樂會已儲存',message:'演出資料與曲目已加入此瀏覽器的音樂足跡。',kind:'concert',id:record.id};
+  const date=localConcertDate(value('ac-d'),value('ac-date-note'));const record={id:newId(),recordType:'local-concert',title:value('ac-t'),...date,time:value('ac-tm'),place:value('ac-p'),ens:value('ac-e'),cond:value('ac-c'),host:value('ac-h2'),rows:collectRows(form),story:value('ac-s'),author:value('ac-n'),media,notes:[],sample:false,local:true,createdAt:Date.now()};await saveConcertRecord(record);ProjectLocalConcerts.saved(record);refreshConcerts();return {title:'音樂會已儲存',message:'演出資料與曲目已加入此瀏覽器的音樂足跡。',kind:'concert',id:record.id};
  }
  if(name==='contrib'){
-  const existing=CON.find(c=>c.id===arg);if(!existing)throw new Error('找不到這場音樂會，請重新開啟。');const rows=collectRows(form),text=value('ct-s');if(!rows.length&&!media.length&&!text)throw new Error('請至少補上一首曲目、一張圖片，或一段說明。');const mergedRows=existing.rows.map(r=>({...r}));for(const row of rows){const same=mergedRows.findIndex(r=>workKey(r)===workKey(row));if(same<0)mergedRows.push(row);else{const previous=mergedRows[same];mergedRows[same]={...previous,...row,zh:previous.zh||row.zh,orig:previous.orig||row.orig,composer:previous.composer||row.composer,arr:previous.arr||row.arr,note:[previous.note,row.note].filter(Boolean).join('；')}}}const base=persistableConcert(existing);const record={...base,local:true,rows:mergedRows,media:[...base.media,...media],notes:[...(base.notes||[]),...(text?[{author:value('ct-n'),text,createdAt:Date.now()}]:[])],updatedAt:Date.now()};await saveRecord('concerts',record);existing.media?.forEach(a=>{releaseURL(a.url);releaseURL(a.poster)});const hydrated=hydrateConcert(record);Object.assign(existing,hydrated);refreshConcerts();return {title:'補充資料已儲存',message:'曲目、圖片與文字已合併到此瀏覽器的音樂會紀錄。',kind:'concert',id:existing.id};
+  const existing=CON.find(c=>c.id===arg);if(!existing)throw new Error('找不到這場音樂會，請重新開啟。');const rows=collectRows(form),text=value('ct-s');if(!rows.length&&!media.length&&!text)throw new Error('請至少補上一首曲目、一張圖片，或一段說明。');const record=ProjectLocalConcerts.prepareSupplement(existing,{rows,media,notes:text?[{author:value('ct-n'),text,createdAt:Date.now()}]:[]});await saveConcertRecord(record);ProjectLocalConcerts.saved(record);refreshConcerts();return {title:'補充資料已儲存',message:'曲目、圖片與文字已存為此瀏覽器的個人補充；公開內容仍依網站最新資料顯示。',kind:'concert',id:existing.id};
  }
  if(name==='report'){
   const record={id:newId(),type:value('rp-t'),description:value('rp-d'),contact:value('rp-c'),context:storageState.reportContext,createdAt:Date.now(),status:'local-draft'};await saveRecord('reports',record);return {title:'回報草稿已儲存',message:'這份草稿只保存在此瀏覽器，尚未送達管理員。',kind:'report'};
@@ -1129,7 +1193,7 @@ function open(name,arg){
 async function shareSite(memoryId){if(location.protocol==='file:'){toast('目前是本機檔案，發布成網站後才能分享網址。');return}const memory=MEM.find(m=>m.id===memoryId),url=location.href.split('#')[0]+(memory&&!memory.local?'#m-'+memory.id:'');const data={title:'大呂的音樂，未完待續',text:'把一起奏響的日子，留在這裡。',url};if(navigator.share){try{await navigator.share(data);return}catch(error){if(error.name==='AbortError')return}}try{await navigator.clipboard.writeText(url);toast(memory?.local?'網站連結已複製；此則回憶仍只保存在本機。':'網站連結已複製，可貼到 LINE 分享。')}catch{toast('請複製瀏覽器網址列，分享給親友。')}}
 async function toggleTheme(){const root=document.documentElement;const isDark=root.dataset.theme==='dark'||!root.dataset.theme&&matchMedia('(prefers-color-scheme: dark)').matches;const value=isDark?'light':'dark';root.dataset.theme=value;const button=$('[data-theme-toggle]');if(button)button.setAttribute('aria-pressed',value==='dark');button.textContent=value==='dark'?'☀':'☾';try{await saveRecord('settings',{id:'theme',value})}catch{toast('外觀已切換，此瀏覽器目前無法保存設定。')}}
 async function initialize(){
- try{storageState.db=await openDatabase();const [memories,concerts,settings]=await Promise.all([allRecords('memories'),allRecords('concerts'),allRecords('settings')]);for(const record of memories.sort((a,b)=>b.createdAt-a.createdAt))if(!MEM.some(m=>m.id===record.id))MEM.push(hydrateMemory(record));for(const record of concerts){const concert=hydrateConcert(record),index=CON.findIndex(c=>c.id===record.id);if(index<0)CON.push(concert);else CON[index]=concert}storageState.likes=new Set(settings.find(s=>s.id==='likes')?.values||[]);const theme=settings.find(s=>s.id==='theme')?.value;if(['dark','light'].includes(theme)){document.documentElement.dataset.theme=theme;const button=$('[data-theme-toggle]');if(button)button.setAttribute('aria-pressed',theme==='dark');if(button)button.textContent=theme==='dark'?'☀':'☾'}renderMem();buildWall(true);refreshConcerts();if(location.hash.startsWith('#m-'))route();storageState.ready=true}
+ try{storageState.db=await openDatabase();const [memories,concerts,settings]=await Promise.all([allRecords('memories'),allRecords('concerts'),allRecords('settings')]);for(const record of memories.sort((a,b)=>b.createdAt-a.createdAt))if(!MEM.some(m=>m.id===record.id))MEM.push(hydrateMemory(record));ProjectLocalConcerts.load(concerts,settings.filter(s=>s.recordType==='concert-supplement'&&Number.isSafeInteger(s.concertId)).map(s=>({...s,id:s.concertId})));storageState.likes=new Set(settings.find(s=>s.id==='likes')?.values||[]);const theme=settings.find(s=>s.id==='theme')?.value;if(['dark','light'].includes(theme)){document.documentElement.dataset.theme=theme;const button=$('[data-theme-toggle]');if(button)button.setAttribute('aria-pressed',theme==='dark');if(button)button.textContent=theme==='dark'?'☀':'☾'}renderMem();buildWall(true);refreshConcerts();if(location.hash.startsWith('#m-'))route();storageState.ready=true}
  catch(error){storageState.error=error.message;toast('此瀏覽器無法儲存新增內容，仍可瀏覽公開紀錄。')}
 }
 

@@ -49,6 +49,7 @@
 | `handoff-v1.1/工程檔/cloud.js` | 新回憶雲端客戶端 `ProjectCloud`，處理投稿、公開列表及附件流程 |
 | `handoff-v1.1/工程檔/home-cloud.js` | 將雲端同步接進首頁；頁面載入、手動重新讀取及投稿後更新，不做背景輪詢 |
 | `handoff-v1.1/工程檔/catalog-client.js` | 公開音樂會、生平與原有公開回憶的同步，更新畫面與下架狀態 |
+| `handoff-v1.1/工程檔/local-concerts.js` | 分開保存與組合公開音樂會、個人本機補充，處理舊副本及不確定日期 |
 | `handoff-v1.1/工程檔/cloud-config.json` | 首頁公開端點與功能開關；目前 enabled、catalogEnabled、existingMemoriesEnabled 均為 true |
 | `shared/catalog.mjs` | 前後端共用的公開內容欄位驗證規則 |
 | `acceptance/src/app.js`、`src/sync.mjs` | 驗收頁邏輯、同步控制；同步控制也由首頁共用 |
@@ -67,7 +68,7 @@
 ```text
 template-original.html + content.json + assets.json／assets
   + base-forms.js + archive.js + base-interaction.js + additions.css
-  + connection.js + cloud.js + catalog-client.js + home-cloud.js
+  + connection.js + cloud.js + local-concerts.js + catalog-client.js + home-cloud.js
   + cloud-config.json + shared/catalog.mjs + acceptance/src/sync.mjs
         ↓ 工程檔/build.mjs（替換、組裝、內嵌）
 工程檔/dist/index.html
@@ -100,6 +101,8 @@ index.html ＝ handoff-v1.1/index.html
 | 後台管理音樂會、生平、原有公開回憶 | `admin/src/catalog.js` → catalog API | 雲端公開內容；首頁後續同步更新 |
 
 既有本機資料不會默默上傳。`connection.js` 提供通用介面，不表示所有表單都已改走雲端。修改資料流應追到表單送出分流與實際 API。
+
+公開場次的個人補充由 `local-concerts.js` 與最新雲端資料組合，另列於「我的本機補充」，不再以本機整場副本遮住公開修訂。下架後只保留個人補充可見，舊副本仍留在本機。訪客新增場次可只填年份或年月，並保留日期待核對註記。
 
 ### 後端各自做什麼
 

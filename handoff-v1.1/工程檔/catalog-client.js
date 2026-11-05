@@ -25,13 +25,11 @@ const ProjectCatalog=(()=>{
    const next=JSON.stringify(result);
    if(next!==fingerprint){
     const viewed=J.view==='concert'?CON.find(c=>c.id===J.id):null;
-    const locals=CON.filter(c=>c.local),localIds=new Set(locals.map(c=>c.id));
-    const hydrated=concerts.filter(c=>!localIds.has(c.id)).map(c=>({...c,poster:ASSETS[c.asset]?.url||ASSETS['lu-portrait'].url,rows:c.rows.map((r,i)=>({...r,no:i+1}))}));
-    CON.splice(0,CON.length,...hydrated,...locals);
+    ProjectLocalConcerts.publish(concerts);
     ARCHIVE.biography=biography.biography;ARCHIVE.biographyMore=biography.biographyMore;ARCHIVE.career=biography.career;
     $('#catalog-biography').textContent=biography.biography;$('#catalog-biography-more').textContent=biography.biographyMore;
     renderCareer();refreshConcerts();
-    if(viewed&&!viewed.local){const current=CON.find(c=>c.id===viewed.id);if(!current){showList();toast('這場音樂會已下架。')}else if(JSON.stringify(current)!==JSON.stringify(viewed))showConcert(current.id)}
+    if(viewed&&!viewed.local){const current=CON.find(c=>c.id===viewed.id);if(!current||current.unavailable){showList();toast('這場音樂會已下架。'+(current?.hasLocalSupplement?'您的本機補充仍保留。':''))}else if(JSON.stringify(current)!==JSON.stringify(viewed))showConcert(current.id)}
     if(memories){
      const viewedMemory=MEM.find(m=>m.id===ltId&&m.managed);
      const retained=MEM.filter(m=>m.local||m.cloud);

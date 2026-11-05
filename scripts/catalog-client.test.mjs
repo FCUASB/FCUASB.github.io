@@ -4,17 +4,19 @@ import vm from 'node:vm';
 import { readFile } from 'node:fs/promises';
 import { validateCatalogDocument } from '../shared/catalog.mjs';
 const source=await readFile(new URL('../handoff-v1.1/工程檔/catalog-client.js',import.meta.url),'utf8');
+const localSource=await readFile(new URL('../handoff-v1.1/工程檔/local-concerts.js',import.meta.url),'utf8');
 const concert={id:1,title:'Synthetic',date:'2000',year:2000,ens:'',place:'',cond:'',story:'',rows:[],source:'https://example.test/source',asset:'lu-portrait'};
 const catalog={schemaVersion:1,biography:{biography:'Synthetic biography',biographyMore:'',career:[]},concerts:[concert]};
 function page(fetch){
  const status={textContent:''},intro={textContent:''};let renders=0,closed=0;
  const context=vm.createContext({fetch,AbortSignal,validateCatalogDocument,console,URL,
   CLOUD_CONFIG:{catalogEnabled:true,catalogEndpoint:'https://example.test/catalog'},
-  J:{view:'concert',id:1},CON:[{...concert,poster:'test',rows:[]},{id:2,local:true}],ASSETS:{'lu-portrait':{url:'test'}},ARCHIVE:{},
+  J:{view:'concert',id:1},CON:[],ASSETS:{'lu-portrait':{url:'test'}},ARCHIVE:{concerts:[concert]},
+  hydrateMedia:items=>items||[],hydrateConcert:r=>({...r,local:true}),releaseURL(){},
   document:{querySelectorAll:()=>[status],body:{classList:{remove(){}}}},$:()=>intro,
   renderCareer(){renders++},refreshConcerts(){renders++},showList(){closed++},showConcert(){},toast(){}
  });
- vm.runInContext(source+';this.catalogClient=ProjectCatalog;',context);
+ vm.runInContext(localSource+';ProjectLocalConcerts.load([{id:2,recordType:"local-concert",local:true}]);'+source+';this.catalogClient=ProjectCatalog;',context);
  return {context,status,intro,renders:()=>renders,closed:()=>closed};
 }
 test('published catalog updates biography and soft-deletes a viewed concert while retaining local records',async()=>{
