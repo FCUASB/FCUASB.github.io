@@ -13,7 +13,7 @@
     "check:cloud-sql": "node scripts/prepare-cloud-sql.mjs --check",
     "build:admin": "node scripts/build-admin.mjs",
     "check:admin": "node scripts/build-admin.mjs --check",
-    "check:edge": "deno check supabase/functions/intake/index.ts supabase/functions/admin/index.ts supabase/functions/media/index.ts supabase/functions/archive-worker/index.ts",
+    "check:edge": "deno check supabase/functions/intake/index.ts supabase/functions/admin/index.ts supabase/functions/media/index.ts supabase/functions/archive-worker/index.ts supabase/functions/visitor/index.ts",
     "test:cloud": "node --test scripts/acceptance-sync.test.mjs scripts/admin-sync.test.mjs scripts/intake.test.mjs scripts/admin-client.test.mjs scripts/admin.test.mjs scripts/media.test.mjs scripts/cloud-client.test.mjs scripts/database.test.mjs scripts/archive-worker.test.mjs scripts/archive-queue.test.mjs scripts/edge-bundle.test.mjs",
     "test:connection": "node --test scripts/connection.test.mjs",
     "serve": "node scripts/serve.mjs",
