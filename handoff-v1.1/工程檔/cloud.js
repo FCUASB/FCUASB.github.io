@@ -28,9 +28,9 @@ const ProjectCloud=(()=>{
  function hydrate(record){
   if(!record||!Number.isSafeInteger(record.displayId)||record.displayId<1000000000000000||typeof record.name!=='string'||typeof record.body!=='string')throw new Error('雲端資料格式錯誤。');
   const attachments=Array.isArray(record.attachments)?record.attachments:[];
-  const media=attachments.filter(a=>a.status==='ready').map(a=>a.source==='youtube'?{id:a.id,type:'video',youtube:a.youtubeId,url:'https://i.ytimg.com/vi/'+encodeURIComponent(a.youtubeId)+'/hqdefault.jpg',w:400,h:300}:{id:a.id,type:a.mimeType?.startsWith('video/')?'video':'photo',url:CLOUD_CONFIG.mediaEndpoint+'/'+encodeURIComponent(a.id),w:a.width||400,h:a.height||300});
+  const media=attachments.filter(a=>a.status==='ready').map(a=>a.source==='youtube'?{id:a.id,type:'video',youtube:a.youtubeId,url:'https://i.ytimg.com/vi/'+encodeURIComponent(a.youtubeId)+'/hqdefault.jpg',w:400,h:300}:{id:a.id,type:a.mimeType?.startsWith('video/')?'video':'photo',url:CLOUD_CONFIG.mediaEndpoint+'/'+encodeURIComponent(a.id),poster:a.posterReady?CLOUD_CONFIG.mediaEndpoint+'/'+encodeURIComponent(a.id)+'?variant=poster':null,w:a.width||400,h:a.height||300});
   const youtube=media[0]?.youtube;
-  return {id:record.displayId,cloudId:record.id,cloud:true,local:false,sample:false,n:record.name,story:record.body,y:record.year,m:record.context?.month,place:record.context?.place||'',rel:record.context?.relationship||'',createdAt:Date.parse(record.createdAt),media,type:media[0]?.type||(youtube?'video':'text'),youtube,src:media[0]?.url||(youtube?'https://i.ytimg.com/vi/'+encodeURIComponent(youtube)+'/hqdefault.jpg':''),w:media[0]?.w||400,h:media[0]?.h||300,pendingAttachments:attachments.filter(a=>!['ready','failed'].includes(a.status)).length};
+  return {id:record.displayId,cloudId:record.id,cloud:true,local:false,sample:false,n:record.name,story:record.body,y:record.year,m:record.context?.month,place:record.context?.place||'',rel:record.context?.relationship||'',createdAt:Date.parse(record.createdAt),media,type:media[0]?.type||(youtube?'video':'text'),youtube,src:media[0]?.url||(youtube?'https://i.ytimg.com/vi/'+encodeURIComponent(youtube)+'/hqdefault.jpg':''),poster:media[0]?.poster,w:media[0]?.w||400,h:media[0]?.h||300,pendingAttachments:attachments.filter(a=>!['ready','failed'].includes(a.status)).length};
  }
  async function refresh(){
   if(!enabled())return;
@@ -52,26 +52,37 @@ const ProjectCloud=(()=>{
   const fingerprint=JSON.stringify(data);if(form._cloudFingerprint!==fingerprint){form._cloudKey=crypto.randomUUID();form._cloudFingerprint=fingerprint}
   let receipt;try{receipt=await request(CLOUD_CONFIG.intakeEndpoint,{...data,idempotencyKey:form._cloudKey,challengeToken:form._challengeToken})}finally{resetChallenge(form)}
   form._cloudReceipt=receipt.id;
-  let failures=0;
+  let failures=0,posterFailures=0;
   try{
    const {attachments}=await request(CLOUD_CONFIG.mediaEndpoint,{action:'list',id:receipt.id,key:form._cloudKey});
    if(!Array.isArray(attachments)||attachments.length!==items.length)throw Error();
    for(let index=0;index<items.length;index++){
-    const attachment=attachments[index],item=items[index];if(attachment.status==='ready')continue;if(['FILE_TOO_LARGE','UNSUPPORTED_FORMAT','EMPTY_FILE'].includes(attachment.errorCode)){failures++;continue}
+    const attachment=attachments[index],item=items[index];if(['FILE_TOO_LARGE','UNSUPPORTED_FORMAT','EMPTY_FILE'].includes(attachment.errorCode)){failures++;continue}
     $('[data-file-status]',form).textContent='文字已收件；正在上傳附件 '+(index+1)+'／'+items.length+'……';
     try{
-     const {url}=await request(CLOUD_CONFIG.mediaEndpoint,{action:'ticket',id:attachment.id,key:form._cloudKey});
-     if(new URL(url).origin!==new URL(CLOUD_CONFIG.intakeEndpoint).origin)throw Error();
-     const uploaded=await fetch(url,{method:'PUT',body:item.original||item.blob,headers:{'Content-Type':fileMime(item),'x-upsert':'false'},credentials:'omit',redirect:'error',signal:AbortSignal.timeout(180000)});
-     if(!uploaded.ok)throw Error();
-     await request(CLOUD_CONFIG.mediaEndpoint,{action:'complete',id:attachment.id,key:form._cloudKey});
-    }catch{failures++;try{await request(CLOUD_CONFIG.mediaEndpoint,{action:'fail',id:attachment.id,key:form._cloudKey})}catch{}}
+     if(attachment.status!=='ready'){
+      const {url}=await request(CLOUD_CONFIG.mediaEndpoint,{action:'ticket',id:attachment.id,key:form._cloudKey});
+      if(new URL(url).origin!==new URL(CLOUD_CONFIG.intakeEndpoint).origin)throw Error();
+      const uploaded=await fetch(url,{method:'PUT',body:item.original||item.blob,headers:{'Content-Type':fileMime(item),'x-upsert':'false'},credentials:'omit',redirect:'error',signal:AbortSignal.timeout(180000)});
+      if(!uploaded.ok)throw Error();
+      await request(CLOUD_CONFIG.mediaEndpoint,{action:'complete',id:attachment.id,key:form._cloudKey});
+     }
+    }catch{failures++;try{await request(CLOUD_CONFIG.mediaEndpoint,{action:'fail',id:attachment.id,key:form._cloudKey})}catch{}continue}
+    if(item.posterBlob&&!attachment.posterReady){try{
+     const {url,ready}=await request(CLOUD_CONFIG.mediaEndpoint,{action:'poster_ticket',id:attachment.id,key:form._cloudKey,size:item.posterBlob.size});
+     if(!ready){
+      if(new URL(url).origin!==new URL(CLOUD_CONFIG.intakeEndpoint).origin)throw Error();
+      const uploaded=await fetch(url,{method:'PUT',body:item.posterBlob,headers:{'Content-Type':'image/jpeg','x-upsert':'false'},credentials:'omit',redirect:'error',signal:AbortSignal.timeout(30000)});
+      if(!uploaded.ok)throw Error();
+      await request(CLOUD_CONFIG.mediaEndpoint,{action:'poster_complete',id:attachment.id,key:form._cloudKey});
+     }
+    }catch{posterFailures++}}
    }
   }catch{failures=items.length}
   let listUpdated=true;try{await refresh()}catch{listUpdated=false}
   const record=MEM.find(m=>m.cloudId===receipt.id);
-  return {cloud:true,title:failures?'文字已收到，部分附件未收到':'投稿已收到',message:'收件編號：'+receipt.id+'。'+(failures?failures+' 個附件未完成上傳；如有填寫聯絡資料，管理員可後續聯繫。':'內容已保存在網站雲端，Drive 歸檔會另行處理。')+(listUpdated?'':'目前無法更新列表，請稍後重新整理。'),kind:record?'memory':'report',id:record?.id};
+  return {cloud:true,title:failures?'文字已收到，部分附件未收到':'投稿已收到',message:'收件編號：'+receipt.id+'。'+(failures?failures+' 個附件未完成上傳；如有填寫聯絡資料，管理員可後續聯繫。':'內容已保存在網站雲端，Drive 歸檔會另行處理。')+(posterFailures?'影片已收到，部分封面未完成，會使用預設封面。':'')+(listUpdated?'':'目前無法更新列表，請稍後重新整理。'),kind:record?'memory':'report',id:record?.id};
  }
- async function prepareFile(file,type){validateFileSize(file);if(type!=='photo')return {blob:file,w:400,h:300};const url=objectURL(file);try{return await new Promise(resolve=>{const image=new Image();const timer=setTimeout(()=>resolve({blob:file,w:400,h:300}),10000);image.onload=()=>{clearTimeout(timer);resolve({blob:file,w:image.naturalWidth||400,h:image.naturalHeight||300})};image.onerror=()=>{clearTimeout(timer);resolve({blob:file,w:400,h:300})};image.src=url})}finally{releaseURL(url)}}
+ async function prepareFile(file,type){validateFileSize(file);if(type!=='photo')return typeof ProjectVideo==='undefined'?{blob:file,w:400,h:300}:ProjectVideo.prepare(file);const url=objectURL(file);try{return await new Promise(resolve=>{const image=new Image();const timer=setTimeout(()=>resolve({blob:file,w:400,h:300}),10000);image.onload=()=>{clearTimeout(timer);resolve({blob:file,w:image.naturalWidth||400,h:image.naturalHeight||300})};image.onerror=()=>{clearTimeout(timer);resolve({blob:file,w:400,h:300})};image.src=url})}finally{releaseURL(url)}}
  return {enabled,fields,attach,dispose,refresh,submit,prepareFile,uploadLimitLabel,validateFileSize};
 })();

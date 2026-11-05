@@ -6,6 +6,8 @@ alter table archive_private.submissions add column display_id bigint generated a
 alter table archive_private.submissions add constraint submissions_display_safe check(display_id<=9007199254740991);
 alter table archive_private.attachments add column width integer not null default 400 check(width between 1 and 100000);
 alter table archive_private.attachments add column height integer not null default 300 check(height between 1 and 100000);
+alter table archive_private.attachments add column poster_size_bytes bigint check(poster_size_bytes is null or (poster_size_bytes between 1 and 262144 and mime_type like 'video/%'));
+alter table archive_private.attachments add column poster_ready boolean not null default false check(not poster_ready or poster_size_bytes is not null);
 create function archive_private.receive_memory(p_record jsonb)
 returns jsonb language plpgsql security definer set search_path = '' as $$
 declare v_id uuid; v_existing archive_private.submissions%rowtype; v_file jsonb; v_attachment uuid; v_slot integer:=0;
@@ -69,7 +71,7 @@ select coalesce(jsonb_agg(item order by created_at desc,id desc),'[]'::jsonb) fr
  select s.id,s.created_at,jsonb_build_object('id',s.id,'displayId',s.display_id,'name',s.display_name,'body',s.body,
   'year',s.memory_year,'context',s.context,'createdAt',s.created_at,
   'attachments',coalesce((select jsonb_agg(jsonb_build_object('id',a.id,'source',a.source,
-    'youtubeId',a.youtube_id,'status',a.status,'mimeType',a.mime_type,'width',a.width,'height',a.height) order by a.slot)
+    'youtubeId',a.youtube_id,'status',a.status,'mimeType',a.mime_type,'width',a.width,'height',a.height,'posterReady',a.poster_ready) order by a.slot)
     from archive_private.attachments a where a.submission_id=s.id and a.deleted_at is null),'[]'::jsonb)) as item
  from archive_private.submissions s where s.status='published' and s.deleted_at is null
    and (p_before is null or (s.created_at,s.id)<(p_before,p_before_id))

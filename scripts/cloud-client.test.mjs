@@ -138,3 +138,28 @@ test('unchanged polls preserve media DOM; a removed cloud record disappears on r
   removed = true; await context.client.refresh(); assert.equal(renders, 2);
   assert.equal(context.MEM.length, 1); assert.equal(context.MEM[0].local, true);
 });
+
+test('a derived poster uses its own upload and a poster failure never marks the received video failed',async()=>{
+ for(const failPoster of [false,true]){
+  const calls=[];
+  const context=client(async(url,options)=>{
+   if(options.method==='GET')return Response.json({records:[{...record,attachments:[{id,status:'ready',mimeType:'video/mp4',posterReady:!failPoster}]}],next:null});
+   if(options.method==='PUT'){calls.push({put:url});return new Response('',{status:200});}
+   const body=JSON.parse(options.body);calls.push(body);
+   if(url.endsWith('/intake'))return Response.json({id});
+   if(body.action==='list')return Response.json({attachments:[{id,status:'pending'}]});
+   if(body.action==='ticket')return Response.json({url:'https://example.test/video-upload'});
+   if(body.action==='poster_ticket')return failPoster?Response.json({error:'UNAVAILABLE'},{status:503}):Response.json({url:'https://example.test/poster-upload'});
+   return Response.json({status:'ready'});
+  });
+  const form={values:{'up-name':'Synthetic','up-story':'Synthetic'},_challengeToken:'synthetic',_media:{items:[{name:'synthetic.mp4',type:'video',blob:{size:100,type:'video/mp4'},posterBlob:{size:20,type:'image/jpeg'},w:400,h:300}]}};
+  const result=await context.client.submit(form);
+  assert.equal(calls[0].uploads.length,1);
+  assert.equal(calls.some(call=>call.action==='fail'),false);
+  assert.equal(calls.some(call=>call.action==='complete'),true);
+  assert.equal(result.title,'投稿已收到');
+  assert.equal(context.MEM.at(-1).media[0].poster,failPoster?null:`https://example.test/media/${id}?variant=poster`);
+  if(failPoster)assert.match(result.message,/影片已收到.*預設封面/);
+  else assert.equal(calls.some(call=>call.action==='poster_complete'),true);
+ }
+});

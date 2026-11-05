@@ -1,7 +1,7 @@
 -- Atomic deployment of reviewed cloud API; foundation must already exist.
 -- Not yet applied. No visitor grants, admin accounts, secrets, or service enablement.
 begin;
--- Source: intake-api.sql; sha256=361a433f71acfe3ffc26d476287629c1b87d1b920bfaea6779379c1fd6f7343f
+-- Source: intake-api.sql; sha256=a9e67e858148bb761b6ee6339cf4427944e87205dcf6f63828c4f0434a24174f
 -- Not yet applied. Service-only RPC bridge; never grant to anon/authenticated.
 
 set local lock_timeout = '5s';
@@ -10,6 +10,8 @@ alter table archive_private.submissions add column display_id bigint generated a
 alter table archive_private.submissions add constraint submissions_display_safe check(display_id<=9007199254740991);
 alter table archive_private.attachments add column width integer not null default 400 check(width between 1 and 100000);
 alter table archive_private.attachments add column height integer not null default 300 check(height between 1 and 100000);
+alter table archive_private.attachments add column poster_size_bytes bigint check(poster_size_bytes is null or (poster_size_bytes between 1 and 262144 and mime_type like 'video/%'));
+alter table archive_private.attachments add column poster_ready boolean not null default false check(not poster_ready or poster_size_bytes is not null);
 create function archive_private.receive_memory(p_record jsonb)
 returns jsonb language plpgsql security definer set search_path = '' as $$
 declare v_id uuid; v_existing archive_private.submissions%rowtype; v_file jsonb; v_attachment uuid; v_slot integer:=0;
@@ -73,7 +75,7 @@ select coalesce(jsonb_agg(item order by created_at desc,id desc),'[]'::jsonb) fr
  select s.id,s.created_at,jsonb_build_object('id',s.id,'displayId',s.display_id,'name',s.display_name,'body',s.body,
   'year',s.memory_year,'context',s.context,'createdAt',s.created_at,
   'attachments',coalesce((select jsonb_agg(jsonb_build_object('id',a.id,'source',a.source,
-    'youtubeId',a.youtube_id,'status',a.status,'mimeType',a.mime_type,'width',a.width,'height',a.height) order by a.slot)
+    'youtubeId',a.youtube_id,'status',a.status,'mimeType',a.mime_type,'width',a.width,'height',a.height,'posterReady',a.poster_ready) order by a.slot)
     from archive_private.attachments a where a.submission_id=s.id and a.deleted_at is null),'[]'::jsonb)) as item
  from archive_private.submissions s where s.status='published' and s.deleted_at is null
    and (p_before is null or (s.created_at,s.id)<(p_before,p_before_id))
@@ -262,7 +264,7 @@ returns boolean language sql security invoker set search_path='' as $$ select ar
 revoke all on function public.archive_consume_rate(text) from public,anon,authenticated;
 grant execute on function public.archive_consume_rate(text) to service_role;
 
--- Source: media-api.sql; sha256=c61ece9de13b90b8619dd91a082d34c3c242645be39a773a424e2dd9a752a651
+-- Source: media-api.sql; sha256=b9a1188c9e92117486ace1b6a1f8d3f907e95979e4efc6328580b55c2616522f
 
 set local lock_timeout='5s';
 create function archive_private.upload_action(p_key uuid,p_id uuid,p_action text,p_size bigint default null,p_mime text default null)
@@ -270,7 +272,7 @@ returns jsonb language plpgsql security definer set search_path='' as $$
 declare v_attachment archive_private.attachments%rowtype; v_result jsonb;
 begin
   if p_action='list' then
-    select coalesce(jsonb_agg(jsonb_build_object('id',a.id,'status',a.status,'filename',a.original_filename,'errorCode',a.error_code) order by a.slot),'[]'::jsonb)
+    select coalesce(jsonb_agg(jsonb_build_object('id',a.id,'status',a.status,'filename',a.original_filename,'errorCode',a.error_code,'posterReady',a.poster_ready) order by a.slot),'[]'::jsonb)
       into v_result from archive_private.submissions s join archive_private.attachments a on a.submission_id=s.id
       where s.id=p_id and s.idempotency_key=p_key and s.deleted_at is null and a.deleted_at is null and a.source='upload'
         and s.created_at>now()-interval '24 hours';
@@ -281,6 +283,26 @@ begin
       and a.source='upload' and s.created_at>now()-interval '24 hours' for update of a;
   if not found then raise exception 'not found' using errcode='P0002'; end if;
   if v_attachment.error_code in ('FILE_TOO_LARGE','UNSUPPORTED_FORMAT','EMPTY_FILE') then raise exception 'file not eligible' using errcode='22023'; end if;
+  if p_action in ('poster_ticket','poster_complete') then
+    if v_attachment.status<>'ready' or coalesce(v_attachment.mime_type,'') not like 'video/%' then
+      raise exception 'poster not eligible' using errcode='22023'; end if;
+    if p_action='poster_ticket' and p_size is not null then
+      if p_size not between 1 and 262144 then raise exception 'invalid poster size' using errcode='22023'; end if;
+      if v_attachment.poster_size_bytes is not null and v_attachment.poster_size_bytes<>p_size then
+        raise exception 'poster size conflict' using errcode='22023'; end if;
+      update archive_private.attachments set poster_size_bytes=p_size where id=p_id;
+      v_attachment.poster_size_bytes:=p_size;
+    end if;
+    if v_attachment.poster_size_bytes is null then raise exception 'poster not prepared' using errcode='22023'; end if;
+    if p_action='poster_complete' then
+      if p_size is distinct from v_attachment.poster_size_bytes or p_mime is distinct from 'image/jpeg' then
+        raise exception 'poster metadata mismatch' using errcode='22023'; end if;
+      update archive_private.attachments set poster_ready=true where id=p_id;
+      v_attachment.poster_ready:=true;
+    end if;
+    return jsonb_build_object('id',p_id,'path',v_attachment.object_path||'.poster.jpg','mimeType','image/jpeg',
+      'size',v_attachment.poster_size_bytes,'ready',v_attachment.poster_ready);
+  end if;
   if p_action='complete' then
     if v_attachment.size_bytes is distinct from p_size or v_attachment.mime_type is distinct from p_mime then
       raise exception 'file metadata mismatch' using errcode='22023'; end if;
@@ -295,7 +317,7 @@ end;
 $$;
 create function archive_private.public_media(p_id uuid)
 returns jsonb language sql stable security definer set search_path='' as $$
-  select jsonb_build_object('path',a.object_path,'mimeType',a.mime_type,'size',a.size_bytes)
+  select jsonb_build_object('path',a.object_path,'mimeType',a.mime_type,'size',a.size_bytes,'posterReady',a.poster_ready,'posterSize',a.poster_size_bytes)
   from archive_private.attachments a join archive_private.submissions s on s.id=a.submission_id
   where a.id=p_id and a.source='upload' and a.status='ready' and a.deleted_at is null and s.deleted_at is null and s.status='published';
 $$;
