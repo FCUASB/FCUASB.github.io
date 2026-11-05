@@ -1,6 +1,6 @@
 # 專案導覽：入口、檔案與互動流程
 
-整理日期：2026-11-04。本次核對基準為 `31c908d`（PR #14 整合後），且已確認 GitHub 遠端 main 同為此提交；正式站仍未於本次重新驗收。下列「已發布」狀態依 repository 最新整合紀錄，不代表本次重新完成線上驗收。
+整理日期：2026-11-06。本次以 `96b6260` 與既有本機修改核對；GitHub 連接器確認遠端 main 為已整合的 `684e947`（PR #19）。首頁自動同步與本輪修正尚未發布；下列「已發布」狀態依 repository 最新整合紀錄，不代表本次重新完成線上驗收。
 
 ## 先理解這個網站
 
@@ -12,7 +12,7 @@
 
 - **來源檔**：維護者實際編輯的內容、程式與樣式。
 - **發布檔**：來源經建置後供瀏覽器開啟的 HTML／JavaScript；首頁不可只手改發布檔。
-- **執行時資料**：訪客開啟網站後，從雲端與該瀏覽器 IndexedDB 讀取的資料。修改靜態內容來源，不等於修改後台已管理的雲端內容。
+- **執行時資料**：公開回憶、音樂會與補充從雲端讀取；喜歡與外觀偏好留在原瀏覽器。舊本機投稿不再顯示或自動上傳。修改靜態內容來源，不等於修改後台已管理的雲端內容。
 
 ## 從哪裡進入
 
@@ -47,9 +47,10 @@
 | `handoff-v1.1/工程檔/archive.js` | 現行回憶卡／相簿、時間軸、音樂會詳情、來源清單、100 字收合及背景音樂 |
 | `handoff-v1.1/工程檔/connection.js` | 通用 HTTP 與 repository 介面；本機 `projectRepository` 使用其封裝 |
 | `handoff-v1.1/工程檔/cloud.js` | 新回憶雲端客戶端 `ProjectCloud`，處理投稿、公開列表及附件流程 |
-| `handoff-v1.1/工程檔/home-cloud.js` | 將雲端同步接進首頁；頁面載入、手動重新讀取及投稿後更新，不做背景輪詢 |
+| `handoff-v1.1/工程檔/home-cloud.js` | 將雲端同步接進首頁；本機修改於可見時每 10 秒同步，切回分頁／視窗立即更新，保留手動讀取 |
+| `handoff-v1.1/工程檔/visitor-client.js` | 訪客新增音樂會、補充與回報的雲端收件，以及公開補充的驗證與讀取 |
 | `handoff-v1.1/工程檔/catalog-client.js` | 公開音樂會、生平與原有公開回憶的同步，更新畫面與下架狀態 |
-| `handoff-v1.1/工程檔/cloud-config.json` | 首頁公開端點與功能開關；目前 enabled、catalogEnabled、existingMemoriesEnabled 均為 true |
+| `handoff-v1.1/工程檔/cloud-config.json` | 首頁公開端點與功能開關；目前 enabled、catalogEnabled、existingMemoriesEnabled、visitorEnabled 均為 true |
 | `shared/catalog.mjs` | 前後端共用的公開內容欄位驗證規則 |
 | `acceptance/src/app.js`、`src/sync.mjs` | 驗收頁邏輯、同步控制；同步控制也由首頁共用 |
 | `admin/src/app.js`、`src/catalog.js` | 後台登入、管理 API 操作、內容管理介面 |
@@ -67,7 +68,7 @@
 ```text
 template-original.html + content.json + assets.json／assets
   + base-forms.js + archive.js + base-interaction.js + additions.css
-  + connection.js + cloud.js + catalog-client.js + home-cloud.js
+  + connection.js + cloud.js + visitor-client.js + catalog-client.js + home-cloud.js
   + cloud-config.json + shared/catalog.mjs + acceptance/src/sync.mjs
         ↓ 工程檔/build.mjs（替換、組裝、內嵌）
 工程檔/dist/index.html
@@ -83,7 +84,7 @@ index.html ＝ handoff-v1.1/index.html
 
 ### 瀏覽與導覽
 
-首頁先建立 `ARCHIVE`（內容）、`ASSETS`（圖片）、`MEM`（畫面中的回憶）、`CON`（畫面中的音樂會）與本機儲存狀態。`initialize()` 嘗試讀取 IndexedDB 的原有內容與偏好，再更新畫面。啟動後的 `startHomepageCloud()` 讀取雲端投稿與公開內容，並提供手動重新讀取；不做定時輪詢，也不因切回分頁或視窗而自動讀取。
+首頁先建立 `ARCHIVE`（內容）、`ASSETS`（圖片）、`MEM`（畫面中的回憶）、`CON`（畫面中的音樂會）與本機儲存狀態。`initialize()` 讀取瀏覽器的喜歡與外觀偏好，保留舊本機內容但不顯示或上傳。啟動後的 `startHomepageCloud()` 讀取雲端投稿與公開內容，並提供手動重新讀取；2026-11-06 本機修改另外在頁面可見時每 10 秒同步、切回分頁或視窗立即讀取，隱藏或離開時停止排程。獨立驗收頁仍按需讀取。
 
 `base-interaction.js` 以 `data-*` 屬性辨識點擊，例如 `data-mem` 開啟回憶、`data-con` 開啟音樂會、`data-open` 開啟表單。畫面繪製主要由 `archive.js` 與保留的模板核心函式負責；`route()` 依網址 hash 切換首頁／生涯介面。
 
@@ -92,14 +93,14 @@ index.html ＝ handoff-v1.1/index.html
 | 使用者動作 | 主要程式路徑 | 資料去向／可見範圍 |
 | --- | --- | --- |
 | 分享新回憶 | 表單 → `open()` submit → `ProjectCloud.submit()` → intake／media | 目前設定為雲端收件；附件狀態需另行確認，文字成功不等於附件已完成 |
-| 訪客新增音樂會 | 表單 → `submitLocal()` → `saveRecord()` | IndexedDB，僅該瀏覽器 |
-| 補充音樂會／曲目 | 表單 → `submitLocal()` → `saveRecord()` | IndexedDB，不能寫成已送達管理員 |
-| 檢舉 | 表單 → `submitLocal()` → `saveRecord()` | IndexedDB，不能寫成已送達管理員 |
+| 訪客新增音樂會 | 表單 → `ProjectVisitor.submit()` → visitor → catalog 更新 | 雲端直接公開，標示「親友新增，尚未核對」 |
+| 補充音樂會／曲目 | 表單 → `ProjectVisitor.submit()` → visitor → catalog 更新 | 雲端直接公開於該場「親友補充」，不覆蓋原始紀錄 |
+| 檢舉／回報 | 表單 → `ProjectVisitor.submit()` → visitor | 只送管理員，不公開；聯絡方式依角色限制 |
 | 喜歡／外觀偏好 | 本機互動 → settings | 該瀏覽器的偏好 |
 | 後台編輯投稿 | `admin/src/app.js` → admin API | 依登入身分與角色處理雲端資料 |
 | 後台管理音樂會、生平、原有公開回憶 | `admin/src/catalog.js` → catalog API | 雲端公開內容；首頁後續同步更新 |
 
-既有本機資料不會默默上傳。`connection.js` 提供通用介面，不表示所有表單都已改走雲端。修改資料流應追到表單送出分流與實際 API。
+既有本機資料不會默默上傳。上述四種投稿均已接通雲端，功能開關關閉時也不會退回本機收件。修改資料流應追到表單送出分流與實際 API。
 
 ### 後端各自做什麼
 
@@ -107,6 +108,7 @@ index.html ＝ handoff-v1.1/index.html
 首頁／驗收頁 ─→ intake：新回憶收件、公開投稿列表
              └→ media：附件上傳票證、完成確認、媒體讀取
 首頁 ─────────→ catalog：公開音樂會、生平、原有公開回憶
+首頁表單 ─────→ visitor：新增音樂會、補充與私人回報
 後台 ─→ Supabase Auth 登入 ─→ admin／catalog：依角色管理
 雲端歸檔工作 ─→ archive-worker ─→ Google Drive（尚未正式啟用）
 ```

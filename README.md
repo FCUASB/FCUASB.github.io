@@ -50,7 +50,7 @@ npm run serve
 
 ## 首頁雲端接入
 
-正式首頁的新回憶投稿已於 2026-10-26 透過 PR #9 接入 Supabase，目前於頁面載入、手動更新及投稿後讀取資料；下架更新須重新讀取後才反映。行為、驗證限制與復原方式見 [接入說明](docs/HOMEPAGE-CLOUD.md)。使用 Node.js 24，執行 npm run build、npm run check、npm run test:home。既有本機內容不會自動上傳；其他補充與檢舉仍是本機資料。
+正式首頁的新回憶投稿已於 2026-10-26 透過 PR #9 接入 Supabase。2026-11-06 本機修改（尚未發布）：回憶與音樂會在頁面可見時每 10 秒自動更新，切回分頁或視窗立即更新；原有載入、手動更新與投稿後更新保留。後台維持每 5 秒更新，編輯時暫停。行為、驗證限制與復原方式見 [接入說明](docs/HOMEPAGE-CLOUD.md)。使用 Node.js 24，執行 npm run build、npm run check、npm run test:home。既有本機內容不會自動上傳；音樂會新增、補充與回報已接通雲端。
 
 
 ## 音樂會與大呂生平管理
