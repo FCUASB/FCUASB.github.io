@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
-for(const name of ['intake','admin','media','archive-worker'])test(`${name} deployment artifact refuses requests without explicit configuration`,async()=>{
+for(const name of ['intake','admin','media','archive-worker','visitor'])test(`${name} deployment artifact refuses requests without explicit configuration`,async()=>{
   let handler,network=false;
   const context=vm.createContext({Deno:{env:{get:()=>''},serve:fn=>handler=fn},Response,Request,URL,URLSearchParams,AbortSignal,TextEncoder,TextDecoder,crypto,
     fetch:async()=>{network=true;throw Error('Unexpected network');}});
