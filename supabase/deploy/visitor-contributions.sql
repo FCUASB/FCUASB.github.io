@@ -96,7 +96,8 @@ begin
   if v_role is null then raise exception 'access denied' using errcode='42501'; end if;
   if p_action='list' then
     if v_kind not in ('supplement','report') then raise exception 'invalid kind' using errcode='22023'; end if;
-    return (select coalesce(jsonb_agg(to_jsonb(c) order by c.created_at desc),'[]'::jsonb) from
+    -- Reporter contact details are limited to the roles that may read submission contacts.
+    return (select coalesce(jsonb_agg(case when v_role in ('system_admin','data_curator') then to_jsonb(c) else to_jsonb(c) #- '{body,contact}' end order by c.created_at desc),'[]'::jsonb) from
       (select * from archive_private.catalog_contributions where kind=v_kind order by created_at desc limit 500) c);
   end if;
   if v_role not in ('system_admin','content_admin') then raise exception 'access denied' using errcode='42501'; end if;

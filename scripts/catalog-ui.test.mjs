@@ -88,3 +88,31 @@ test('a background catalog response cannot redraw an editor opened during the re
   assert.equal(p.get('catalog-edit-dialog').open,true);assert.equal(title.value,'Draft');
  }finally{p.restore();}
 });
+
+test('visitor supplements can be hidden and restored; reports show contact only to allowed roles and can be resolved',async()=>{
+ const supplement={id:'11111111-1111-4111-8111-111111111111',kind:'supplement',target_kind:'concert',target_id:'5',display_name:'親友',body:{text:'補充內容',rows:[{zh:'曲名',composer:'作曲'}]},hidden_at:null,resolved_at:null,created_at:'2026-11-05T00:00:00Z'};
+ const report={id:'22222222-2222-4222-8222-222222222222',kind:'report',target_kind:'site',target_id:'general',display_name:'訪客',body:{type:'資料錯誤',detail:'說明',contact:'a@b.c'},hidden_at:null,resolved_at:null,created_at:'2026-11-05T00:00:00Z'};
+ const calls=[];
+ const api=async(action,input)=>{calls.push([action,input]);if(action==='catalog.visitor_list')return input.kind==='report'?[report]:[supplement];return {};};
+ const p=setup(api);try{
+  await p.get('section-supplement').onclick();
+  assert.match(p.get('supplement-count').textContent,/1 筆/);
+  assert.ok(p.all(p.get('supplement-results')).some(n=>/補充內容/.test(n.textContent)));
+  await p.all(p.get('supplement-results')).find(n=>n.textContent==='隱藏').onclick();
+  assert.deepEqual(calls.find(c=>c[0]==='catalog.visitor_hide'),['catalog.visitor_hide',{id:supplement.id}]);
+  await p.get('section-report').onclick();
+  assert.match(p.get('report-count').textContent,/1 筆待處理/);
+  assert.ok(p.all(p.get('report-results')).some(n=>/a@b\.c/.test(n.textContent)));
+  await p.all(p.get('report-results')).find(n=>n.textContent==='標記已處理').onclick();
+  assert.deepEqual(calls.find(c=>c[0]==='catalog.visitor_resolve'),['catalog.visitor_resolve',{id:report.id}]);
+ }finally{p.restore();}
+ const viewer=setup(api,'data_curator');try{
+  await viewer.get('section-report').onclick();
+  assert.ok(viewer.all(viewer.get('report-results')).some(n=>/a@b\.c/.test(n.textContent)));
+  assert.equal(viewer.all(viewer.get('report-results')).some(n=>n.textContent==='標記已處理'),false);
+ }finally{viewer.restore();}
+ const outsider=setup(api,'content_admin');try{
+  await outsider.get('section-report').onclick();
+  assert.equal(outsider.all(outsider.get('report-results')).some(n=>/a@b\.c/.test(n.textContent)),false);
+ }finally{outsider.restore();}
+});
