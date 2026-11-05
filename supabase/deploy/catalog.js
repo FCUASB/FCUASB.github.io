@@ -126,7 +126,8 @@
 
   // supabase/functions/catalog/handler.mjs
   var uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  function createCatalogHandler({ origins: origins2, enabled = false, authenticate: authenticate2, execute, readPublic, consumeRate }) {
+  var visitorActions = { visitor_list: "list", visitor_hide: "hide", visitor_restore: "restore", visitor_resolve: "resolve", visitor_reopen: "reopen" };
+  function createCatalogHandler({ origins: origins2, enabled = false, authenticate: authenticate2, execute, executeVisitor, readPublic, consumeRate }) {
     return async (request) => {
       const origin = request.headers.get("origin");
       const headers = {
@@ -153,6 +154,17 @@
         if (!identity || !uuid.test(identity.id) || !uuid.test(identity.sessionId)) throw new IntakeError(401, "LOGIN_REQUIRED");
         if (!await consumeRate("admin")) throw new IntakeError(429, "RATE_LIMITED");
         const body = await boundedJSON(request, 98304);
+        if (visitorActions[body.action]) {
+          const visitor = body.input || {}, clean2 = {};
+          if (body.action === "visitor_list") {
+            if (!["supplement", "report"].includes(visitor.kind)) throw new IntakeError(400, "INVALID_INPUT");
+            clean2.kind = visitor.kind;
+          } else {
+            if (typeof visitor.id !== "string" || !uuid.test(visitor.id)) throw new IntakeError(400, "INVALID_ID");
+            clean2.id = visitor.id;
+          }
+          return reply(200, { result: await executeVisitor(identity, visitorActions[body.action], clean2) });
+        }
         if (!["list", "save", "visibility", "history"].includes(body.action)) throw new IntakeError(400, "INVALID_ACTION");
         const input = body.input || {};
         if (!["concert", "biography", "memory"].includes(input.kind)) throw new IntakeError(400, "INVALID_INPUT");
@@ -236,7 +248,14 @@
     enabled: env("CATALOG_ENABLED") === "true" && !!base && !!key && origins.length > 0,
     authenticate,
     consumeRate: (scope) => rpc("archive_consume_rate", { p_scope: scope }),
-    readPublic: () => rpc("archive_catalog_public"),
+    // Supplements are public additions; they are merged here so the catalog RPC itself stays unchanged.
+    readPublic: async () => ({ ...await rpc("archive_catalog_public"), supplements: await rpc("archive_catalog_supplements") }),
+    executeVisitor: (identity, action, input) => rpc("archive_visitor_admin", {
+      p_actor: identity.id,
+      p_session: identity.sessionId,
+      p_action: action,
+      p_input: input
+    }),
     execute: (identity, action, input) => rpc("archive_catalog_action", {
       p_actor: identity.id,
       p_session: identity.sessionId,
