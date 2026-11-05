@@ -1,7 +1,8 @@
 import { boundedJSON, IntakeError } from '../intake/handler.mjs';
 import { validateCatalogDocument } from '../../../shared/catalog.mjs';
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-export function createCatalogHandler({ origins, enabled = false, authenticate, execute, readPublic, consumeRate }) {
+const visitorActions = { visitor_list: 'list', visitor_hide: 'hide', visitor_restore: 'restore', visitor_resolve: 'resolve', visitor_reopen: 'reopen' };
+export function createCatalogHandler({ origins, enabled = false, authenticate, execute, executeVisitor, readPublic, consumeRate }) {
   return async request => {
     const origin = request.headers.get('origin');
     const headers = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', Vary: 'Origin',
@@ -23,6 +24,12 @@ export function createCatalogHandler({ origins, enabled = false, authenticate, e
       if (!identity || !uuid.test(identity.id) || !uuid.test(identity.sessionId)) throw new IntakeError(401, 'LOGIN_REQUIRED');
       if (!await consumeRate('admin')) throw new IntakeError(429, 'RATE_LIMITED');
       const body = await boundedJSON(request, 98304);
+      if (visitorActions[body.action]) {
+        const visitor = body.input || {}, clean = {};
+        if (body.action === 'visitor_list') { if (!['supplement', 'report'].includes(visitor.kind)) throw new IntakeError(400, 'INVALID_INPUT'); clean.kind = visitor.kind; }
+        else { if (typeof visitor.id !== 'string' || !uuid.test(visitor.id)) throw new IntakeError(400, 'INVALID_ID'); clean.id = visitor.id; }
+        return reply(200, { result: await executeVisitor(identity, visitorActions[body.action], clean) });
+      }
       if (!['list', 'save', 'visibility', 'history'].includes(body.action)) throw new IntakeError(400, 'INVALID_ACTION');
       const input = body.input || {};
       if (!['concert', 'biography', 'memory'].includes(input.kind)) throw new IntakeError(400, 'INVALID_INPUT');

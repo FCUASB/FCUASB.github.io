@@ -81,7 +81,7 @@ test('front page follows managed deletions, preserves local/cloud records and fa
     lt:{open:true,close(){closes++;}},storageState:{albumIds:[]},mem:{order:null},
     document:{querySelectorAll:()=>[],body:{classList:{remove(){}}}},$:()=>({}),renderCareer(){},refreshConcerts(){},showList(){},showConcert(){},toast(){},renderMem(){renders++;},buildWall(){},drawLight(){}
   });
-  vm.runInContext(await read('handoff-v1.1/工程檔/catalog-client.js')+';this.client=ProjectCatalog;',context);
+  vm.runInContext(await read('handoff-v1.1/工程檔/visitor-client.js')+await read('handoff-v1.1/工程檔/catalog-client.js')+';this.client=ProjectCatalog;',context);
   await context.client.refresh();assert.equal(context.MEM.length,3);assert.equal(context.MEM[2].managed,true);
   await context.client.refresh();assert.equal(renders,1);
   result={...result,memories:[]};await context.client.refresh();assert.equal(context.MEM.length,2);assert.equal(closes,1);
