@@ -92,7 +92,7 @@ export function mountCatalog({ api, task, notice, getRole, enabled }) {
       && (filter==='all'||(filter==='deleted')===!!r.deleted_at));
     $('concert-count').textContent=`${selected.length} 筆音樂會。`;
     for(const record of selected.sort((a,b)=>Number(a.document.timelineOrder||a.document.year*10000)-Number(b.document.timelineOrder||b.document.year*10000))){
-      const item=node('article'); item.append(node('h3',record.document.title),node('p',`${record.document.dateLabel||record.document.date} · ${record.document.ens} · ${record.deleted_at?'已下架':'公開中'}`));
+      const item=node('article'); item.append(node('h3',record.document.title),node('p',`${record.document.dateLabel||record.document.date} · ${record.document.ens} · ${record.deleted_at?'已下架':'公開中'}${record.document.origin==='visitor'?' · 親友新增（'+(record.document.contributor||'')+'）':''}`));
       const actions=node('div'); actions.className='actions';
       if(editable())actions.append(button('編輯',()=>openEditor(record,'concert')),button(record.deleted_at?'恢復公開':'下架',async()=>{
         if(!confirm(record.deleted_at?'恢復這場音樂會公開？':'下架這場音樂會？原始資料與版本仍保留。'))return;
@@ -114,9 +114,37 @@ export function mountCatalog({ api, task, notice, getRole, enabled }) {
     if(!events.length)$('catalog-history').append(node('p','尚無變更紀錄。'));
     $('catalog-history').hidden=false;
   }
+  function renderVisitor(type,list){
+    const box=$(type+'-results'); box.replaceChildren();
+    $(type+'-count').textContent=type==='supplement'?`${list.length} 筆親友補充。`:`${list.filter(r=>!r.resolved_at).length} 筆待處理，共 ${list.length} 筆回報。`;
+    if(!list.length)box.append(node('p',type==='supplement'?'目前沒有親友補充。':'目前沒有回報。'));
+    for(const record of list){
+      const item=node('article'),body=record.body||{};
+      const state=type==='supplement'?(record.hidden_at?'已隱藏':'公開中'):(record.resolved_at?'已處理':'待處理');
+      item.append(node('h3',`${record.display_name} · ${state}`),node('p',`${record.target_kind==='site'?'網站整體':record.target_kind==='memory'?'回憶 '+record.target_id:'音樂會 '+record.target_id} · ${record.created_at}`));
+      if(type==='report')item.append(node('p',`類型：${body.type||'未填'}`));
+      item.append(node('p',(type==='supplement'?body.text:body.detail)||'（無文字）'));
+      if(type==='supplement'&&Array.isArray(body.rows)&&body.rows.length)item.append(node('p','曲目：'+body.rows.map(r=>[r.zh||r.orig,r.composer].filter(Boolean).join('／')).join('；')));
+      if(type==='report'&&body.contact&&['system_admin','data_curator'].includes(getRole()))item.append(node('p','聯絡方式：'+body.contact));
+      if(editable()){
+        const actions=node('div');actions.className='actions';
+        const [action,label]=type==='supplement'?(record.hidden_at?['visitor_restore','恢復公開']:['visitor_hide','隱藏']):(record.resolved_at?['visitor_reopen','重新開啟']:['visitor_resolve','標記已處理']);
+        actions.append(button(label,async()=>{await api('catalog.'+action,{id:record.id});await load(type);}));
+        item.append(actions);
+      }
+      box.append(item);
+    }
+  }
   async function load(type,{background=false}={}){
     if(!enabled)throw Error('音樂會與生平雲端管理尚未啟用，請由維護者完成接入。');
     const currentGeneration=++generation;
+    if(type==='supplement'||type==='report'){
+      const list=await api('catalog.visitor_list',{kind:type}); if(currentGeneration!==generation)return false;
+      if(!Array.isArray(list))throw Error('無法讀取內容資料。');
+      if(background&&activeType!==type)return false;
+      const next=JSON.stringify(list); if(background&&fingerprint===next)return true;
+      fingerprint=next; renderVisitor(type,list); return true;
+    }
     const data=await api('catalog.list',{kind:type}); if(currentGeneration!==generation)return false;
     if(!Array.isArray(data))throw Error('無法讀取內容資料。');
     if(background&&($('catalog-edit-dialog').open||activeType!==type))return false;
@@ -138,7 +166,7 @@ export function mountCatalog({ api, task, notice, getRole, enabled }) {
   function choose(type){
     activeType=type;fingerprint=undefined;
     generation++; $('catalog-history').hidden=true;
-    for(const [name,id] of [['submissions','submissions-panel'],['memory','memory-panel'],['concert','concert-panel'],['biography','biography-panel']]){
+    for(const [name,id] of [['submissions','submissions-panel'],['memory','memory-panel'],['concert','concert-panel'],['biography','biography-panel'],['supplement','supplement-panel'],['report','report-panel']]){
       $(id).hidden=name!==type; $('section-'+name).setAttribute('aria-pressed',String(name===type));
     }
     if(type!=='submissions')return load(type);
@@ -170,7 +198,7 @@ export function mountCatalog({ api, task, notice, getRole, enabled }) {
     if(!selected.length)results.append(node('p','沒有符合條件的既有回憶。'));
     $('memory-export').hidden=!['system_admin','data_curator'].includes(getRole());
   }
-  for(const type of ['submissions','memory','concert','biography'])$('section-'+type).onclick=()=>task(()=>choose(type));
+  for(const type of ['submissions','memory','concert','biography','supplement','report'])$('section-'+type).onclick=()=>task(()=>choose(type));
   $('memory-search').onsubmit=event=>{event.preventDefault();renderMemories();};
   $('memory-reload').onclick=()=>task(()=>load('memory'));
   $('memory-export').onclick=()=>{
@@ -181,7 +209,9 @@ export function mountCatalog({ api, task, notice, getRole, enabled }) {
   $('concert-search').onsubmit=event=>{event.preventDefault();renderConcerts();};
   $('concert-reload').onclick=()=>task(()=>load('concert'));
   $('biography-reload').onclick=()=>task(()=>load('biography'));
+  $('supplement-reload').onclick=()=>task(()=>load('supplement'));
+  $('report-reload').onclick=()=>task(()=>load('report'));
   $('concert-new').onclick=()=>{ const id=Date.now(); openEditor({entry_id:String(id),revision:0,document:{id,title:'',date:'',year:new Date().getFullYear(),ens:'',place:'',cond:'',story:'',source:'',sourceName:'',asset:'lu-portrait',imageLabel:'呂彥慶指揮資料照（非該場演出照片）',rows:[],need:true}},'concert'); };
   $('catalog-edit-dialog').addEventListener('cancel',()=>{editGeneration++});
-  return { enter(){choose('submissions');},refresh(){return activeType==='submissions'?Promise.resolve(true):load(activeType,{background:true});},clear(){generation++;editGeneration++;rows=[];fingerprint=undefined;activeType='submissions';for(const id of ['memory-results','concert-results','biography-content','catalog-history'])$(id).replaceChildren();$('catalog-edit-dialog').close();$('catalog-edit-form').replaceChildren();} };
+  return { enter(){choose('submissions');},refresh(){return activeType==='submissions'?Promise.resolve(true):load(activeType,{background:true});},clear(){generation++;editGeneration++;rows=[];fingerprint=undefined;activeType='submissions';for(const id of ['memory-results','concert-results','biography-content','catalog-history','supplement-results','report-results'])$(id).replaceChildren();$('catalog-edit-dialog').close();$('catalog-edit-form').replaceChildren();} };
 }

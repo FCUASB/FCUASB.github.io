@@ -193,3 +193,10 @@
 - 生平原文儲存成功，版本 1/2 可查；介紹、補充文字與 21 事件的 label/title/description/source/timelineOrder 全數與基準一致，未改寫事實。
 - 兩份正式首頁200且 HTML相同。真人資料整理員、實際恢復公開、Advisor（介面 unavailable）、200人負載、Drive、passkey、影片實傳仍未驗收。
 - 正式成果由隔離 worktree 的 codex/admin-catalog 交付，主工作區歷史開發草稿保留，未 pull/reset 覆蓋。
+
+## 2026-11-05 訪客音樂會、補充與回報上線
+
+- 目標專案 rikgchswpjaxlnhdrxtw：先備份 catalog_entries／catalog_history，再執行 supabase/deploy/visitor-contributions.sql（單一交易，驗證 rate_limits 的 visitor_write=120、新表為空、四個新函式存在）。
+- 部署 visitor 函式（Verify JWT 關閉，VISITOR_ENABLED=true）與新版 catalog 函式；以指令確認公開讀取 200、42 場音樂會、25 則既有回憶、supplements 欄位存在，管理動作未登入回 401，visitor 對不合法內容、缺少或偽造 token、非 dalu.tw 來源皆拒絕且未寫入。
+- PR #17 合併程式，PR #18 開啟 visitorEnabled。上線後以真實 Turnstile 實測新增、補充、回報皆成功，回報不公開。
+- 測試中發現一場公開的驗收合成音樂會，已由管理員下架。未驗證：手機 360／430px、跨裝置、真實上限與頻率限制。

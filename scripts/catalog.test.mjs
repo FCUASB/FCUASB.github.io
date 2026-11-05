@@ -24,6 +24,18 @@ test('catalog boundary requires verified identity and strips caller role/actor o
  assert.equal((await handler(request('valid',{kind:'concert',id:'1',revision:0,document:concert,actor:'attacker',role:'system_admin'}))).status,200);assert.equal(reached,1);
  assert.equal((await handler(new Request('https://example.test/catalog',{headers:{origin:'https://attacker.test'}}))).status,403);
 });
+test('visitor moderation actions are routed only after identity checks and with strict ids',async()=>{
+ const calls=[];
+ const handler=createCatalogHandler({origins:['https://dalu.tw'],enabled:true,consumeRate:async()=>true,authenticate:async token=>token==='valid'?{id,sessionId:id}:null,
+  readPublic:async()=>({schemaVersion:1}),execute:async()=>assert.fail('catalog action must not run'),executeVisitor:async(identity,action,input)=>{calls.push([identity.id,action,input]);return[];}});
+ const post=(token,body)=>handler(new Request('https://example.test/catalog',{method:'POST',headers:{origin:'https://dalu.tw',authorization:'Bearer '+token,'content-type':'application/json'},body:JSON.stringify(body)}));
+ assert.equal((await post('bad',{action:'visitor_list',input:{kind:'report'}})).status,401);
+ assert.equal((await post('valid',{action:'visitor_list',input:{kind:'other'}})).status,400);
+ assert.equal((await post('valid',{action:'visitor_hide',input:{id:'not-a-uuid'}})).status,400);
+ assert.equal((await post('valid',{action:'visitor_list',input:{kind:'report',actor:'attacker'}})).status,200);
+ assert.equal((await post('valid',{action:'visitor_hide',input:{id,role:'system_admin'}})).status,200);
+ assert.deepEqual(calls,[[id,'list',{kind:'report'}],[id,'hide',{id}]]);
+});
 test('Postgres catalog enforces roles, live sessions, revisions, soft-delete and version history',async()=>{
  const db=new PGlite();try{
   await db.exec('create role anon;create role authenticated;create role service_role;create schema auth;create table auth.users(id uuid primary key);create table auth.sessions(id uuid primary key,user_id uuid references auth.users(id),not_after timestamptz);');
