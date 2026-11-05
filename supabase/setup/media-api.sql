@@ -5,7 +5,7 @@ returns jsonb language plpgsql security definer set search_path='' as $$
 declare v_attachment archive_private.attachments%rowtype; v_result jsonb;
 begin
   if p_action='list' then
-    select coalesce(jsonb_agg(jsonb_build_object('id',a.id,'status',a.status,'filename',a.original_filename,'errorCode',a.error_code) order by a.slot),'[]'::jsonb)
+    select coalesce(jsonb_agg(jsonb_build_object('id',a.id,'status',a.status,'filename',a.original_filename,'errorCode',a.error_code,'posterReady',a.poster_ready) order by a.slot),'[]'::jsonb)
       into v_result from archive_private.submissions s join archive_private.attachments a on a.submission_id=s.id
       where s.id=p_id and s.idempotency_key=p_key and s.deleted_at is null and a.deleted_at is null and a.source='upload'
         and s.created_at>now()-interval '24 hours';
@@ -16,6 +16,26 @@ begin
       and a.source='upload' and s.created_at>now()-interval '24 hours' for update of a;
   if not found then raise exception 'not found' using errcode='P0002'; end if;
   if v_attachment.error_code in ('FILE_TOO_LARGE','UNSUPPORTED_FORMAT','EMPTY_FILE') then raise exception 'file not eligible' using errcode='22023'; end if;
+  if p_action in ('poster_ticket','poster_complete') then
+    if v_attachment.status<>'ready' or coalesce(v_attachment.mime_type,'') not like 'video/%' then
+      raise exception 'poster not eligible' using errcode='22023'; end if;
+    if p_action='poster_ticket' and p_size is not null then
+      if p_size not between 1 and 262144 then raise exception 'invalid poster size' using errcode='22023'; end if;
+      if v_attachment.poster_size_bytes is not null and v_attachment.poster_size_bytes<>p_size then
+        raise exception 'poster size conflict' using errcode='22023'; end if;
+      update archive_private.attachments set poster_size_bytes=p_size where id=p_id;
+      v_attachment.poster_size_bytes:=p_size;
+    end if;
+    if v_attachment.poster_size_bytes is null then raise exception 'poster not prepared' using errcode='22023'; end if;
+    if p_action='poster_complete' then
+      if p_size is distinct from v_attachment.poster_size_bytes or p_mime is distinct from 'image/jpeg' then
+        raise exception 'poster metadata mismatch' using errcode='22023'; end if;
+      update archive_private.attachments set poster_ready=true where id=p_id;
+      v_attachment.poster_ready:=true;
+    end if;
+    return jsonb_build_object('id',p_id,'path',v_attachment.object_path||'.poster.jpg','mimeType','image/jpeg',
+      'size',v_attachment.poster_size_bytes,'ready',v_attachment.poster_ready);
+  end if;
   if p_action='complete' then
     if v_attachment.size_bytes is distinct from p_size or v_attachment.mime_type is distinct from p_mime then
       raise exception 'file metadata mismatch' using errcode='22023'; end if;
@@ -30,7 +50,7 @@ end;
 $$;
 create function archive_private.public_media(p_id uuid)
 returns jsonb language sql stable security definer set search_path='' as $$
-  select jsonb_build_object('path',a.object_path,'mimeType',a.mime_type,'size',a.size_bytes)
+  select jsonb_build_object('path',a.object_path,'mimeType',a.mime_type,'size',a.size_bytes,'posterReady',a.poster_ready,'posterSize',a.poster_size_bytes)
   from archive_private.attachments a join archive_private.submissions s on s.id=a.submission_id
   where a.id=p_id and a.source='upload' and a.status='ready' and a.deleted_at is null and s.deleted_at is null and s.status='published';
 $$;

@@ -17,10 +17,12 @@ jobs:
       - run: npm run check
       - run: npm run test:connection
       - run: npm run test:cloud
+      - run: npm run test:video
       - run: npm run check:admin
       - run: npm run check:acceptance
       - run: npm run check:edge
       - run: npm run check:cloud-sql
+      - run: npm run check:video-posters
       - run: npm run check:edge-bundle
       - run: npm run test:home
       - run: npm run test:catalog

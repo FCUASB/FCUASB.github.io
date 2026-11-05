@@ -29,7 +29,10 @@
     "check:catalog": "node scripts/prepare-catalog.mjs --check",
     "prepare:memories": "node scripts/prepare-existing-memories.mjs",
     "check:memories": "node scripts/prepare-existing-memories.mjs --check",
-    "test:memories": "node --test scripts/existing-memories.test.mjs"
+    "test:memories": "node --test scripts/existing-memories.test.mjs",
+    "prepare:video-posters": "node scripts/prepare-video-posters.mjs",
+    "check:video-posters": "node scripts/prepare-video-posters.mjs --check",
+    "test:video": "node --test scripts/video-posters.test.mjs scripts/video-client.test.mjs"
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.5.11",

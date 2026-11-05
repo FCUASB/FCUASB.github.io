@@ -78,17 +78,19 @@
         if (request.method === "POST") {
           if (!await consumeRate("upload_ticket")) throw new IntakeError(429, "RATE_LIMITED");
           const input = await boundedJSON(request, 4096);
-          if (!UUID.test(input.id) || !UUID.test(input.key) || !["list", "ticket", "complete", "fail"].includes(input.action)) throw new IntakeError(400, "INVALID_INPUT");
-          const object = await uploadAction(input.key, input.id, input.action === "complete" ? "ticket" : input.action);
+          if (!UUID.test(input.id) || !UUID.test(input.key) || !["list", "ticket", "complete", "fail", "poster_ticket", "poster_complete"].includes(input.action)) throw new IntakeError(400, "INVALID_INPUT");
+          if (input.action === "poster_ticket" && (!Number.isSafeInteger(input.size) || input.size < 1 || input.size > 262144)) throw new IntakeError(400, "INVALID_POSTER_SIZE");
+          const lookupAction = input.action === "complete" ? "ticket" : input.action === "poster_complete" ? "poster_ticket" : input.action;
+          const object = await uploadAction(input.key, input.id, lookupAction, input.action === "poster_ticket" ? input.size : void 0);
           if (input.action === "list") return reply(200, { attachments: object });
           if (!object) throw new IntakeError(404, "NOT_FOUND");
-          if (input.action === "ticket") return reply(200, { url: await signUpload(object.path) });
-          if (input.action === "complete") {
+          if (input.action === "ticket" || input.action === "poster_ticket") return reply(200, object.ready ? { ready: true } : { url: await signUpload(object.path) });
+          if (input.action === "complete" || input.action === "poster_complete") {
             const metadata2 = await inspectObject(object.path);
             if (!metadata2 || metadata2.size !== object.size || metadata2.mimeType !== object.mimeType || !safeMime(metadata2.mimeType)) throw new IntakeError(400, "FILE_MISMATCH");
-            await uploadAction(input.key, input.id, "complete", metadata2.size, metadata2.mimeType);
+            await uploadAction(input.key, input.id, input.action, metadata2.size, metadata2.mimeType);
           }
-          return reply(200, { status: input.action === "complete" ? "ready" : "failed" });
+          return reply(200, { status: input.action.endsWith("complete") ? "ready" : "failed" });
         }
         if (!["GET", "HEAD"].includes(request.method)) return reply(405, { error: "METHOD_NOT_ALLOWED" });
         const id = new URL(request.url).pathname.split("/").at(-1);
@@ -103,6 +105,10 @@
           download = true;
         } else metadata = await publicMedia(id);
         if (!metadata || !safeMime(metadata.mimeType)) throw new IntakeError(404, "NOT_FOUND");
+        if (new URL(request.url).searchParams.get("variant") === "poster") {
+          if (!metadata.posterReady || !metadata.mimeType.startsWith("video/")) throw new IntakeError(404, "NOT_FOUND");
+          metadata = { ...metadata, path: metadata.path + ".poster.jpg", mimeType: "image/jpeg", size: metadata.posterSize };
+        }
         const range = request.headers.get("range");
         if (range && !/^bytes=(\d+-\d*|-\d+)$/.test(range)) throw new IntakeError(416, "INVALID_RANGE");
         const upstream = await readObject(metadata.path, request.method, range);

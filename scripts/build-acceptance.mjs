@@ -3,7 +3,8 @@ const root = new URL('../', import.meta.url);
 const client = (await readFile(new URL('handoff-v1.1/工程檔/cloud.js', root), 'utf8')).replaceAll('\r\n', '\n');
 const adapter = (await readFile(new URL('acceptance/src/app.js', root), 'utf8')).replaceAll('\r\n', '\n');
 const sync = (await readFile(new URL('acceptance/src/sync.mjs', root), 'utf8')).replaceAll('\r\n', '\n').replace(/^export /gm, '');
-const output = '// Generated from the shared cloud client and acceptance/src/app.js.\n' + client + '\n' + sync + '\n' + adapter;
+const video = (await readFile(new URL('shared/video.js', root), 'utf8')).replaceAll('\r\n', '\n');
+const output = '// Generated from the shared cloud client and acceptance/src/app.js.\n' + video + '\n' + client + '\n' + sync + '\n' + adapter;
 const path = new URL('acceptance/app.js', root);
 if (process.argv.includes('--check')) {
   if (await readFile(path, 'utf8') !== output) throw Error('驗收頁與來源不一致，請執行 build:acceptance');

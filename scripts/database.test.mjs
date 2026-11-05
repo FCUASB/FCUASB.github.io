@@ -14,6 +14,8 @@ test('PostgreSQL intake transaction, permissions, retries, and soft deletion', a
     await db.exec(await readFile(new URL('../supabase/setup/admin-api.sql', import.meta.url), 'utf8'));
     await db.exec(await readFile(new URL('../supabase/setup/rate-limits.sql', import.meta.url), 'utf8'));
     await db.exec(await readFile(new URL('../supabase/setup/media-api.sql', import.meta.url), 'utf8'));
+    // The production upgrade is safe to apply to an already current database as well.
+    await db.exec(await readFile(new URL('../supabase/setup/video-posters.sql', import.meta.url), 'utf8'));
     const tables = await db.query(`select relname,relrowsecurity from pg_class c join pg_namespace n on n.oid=c.relnamespace
       where n.nspname='archive_private' and c.relkind='r'`);
     assert.equal(tables.rows.length, 8);
@@ -57,6 +59,7 @@ test('PostgreSQL intake transaction, permissions, retries, and soft deletion', a
     await media('archive_upload_action',[uploadRecord.idempotency_key,uploads[0].id,'complete',100,'image/jpeg']);
     assert.equal((await db.query('select count(*)::int as n from archive_private.archive_jobs')).rows[0].n,1);
     assert.equal((await media('archive_public_media',[uploads[0].id])).mimeType,'image/jpeg');
+    await assert.rejects(media('archive_upload_action',[uploadRecord.idempotency_key,uploads[0].id,'poster_ticket',100,null]),/poster not eligible/);
     await db.query('update archive_private.submissions set deleted_at=now() where id=$1',[uploadReceipt.id]);
     assert.equal(await media('archive_public_media',[uploads[0].id]),null);
     assert.equal(published.length, 1);

@@ -12,14 +12,15 @@ const form = $('#f-up');
 form._media = { items: [], disposed: false };
 function node(tag, text) { const result = document.createElement(tag); if (text != null) result.textContent = text; return result; }
 function renderMem() {
-  const root = $('#records'); root.replaceChildren();
+  const root = $('#records'); ProjectVideo.stop(root); root.replaceChildren();
   for (const record of MEM.filter(record => record.n.startsWith('驗收'))) {
     const card = node('article');
     card.append(node('h3', record.n), node('p', record.story), node('code', record.cloudId));
     if (record.pendingAttachments) card.append(node('p', `${record.pendingAttachments} 個附件尚在處理`));
     for (const media of record.media) {
       if (media.youtube) { const link = node('a', '開啟 YouTube 測試影片'); link.href = 'https://www.youtube.com/watch?v=' + encodeURIComponent(media.youtube); link.target = '_blank'; link.rel = 'noopener'; card.append(link); }
-      else { const asset = node(media.type === 'video' ? 'video' : 'img'); asset.src = media.url; if (media.type === 'video') { asset.controls = true; asset.preload = 'metadata'; } else { asset.alt = '測試附件'; asset.loading = 'lazy'; } card.append(asset); }
+      else if (media.type === 'video') { const wrapper=node('div'); wrapper.innerHTML=ProjectVideo.player(media,'測試影片'); card.append(wrapper); }
+      else { const asset = node('img'); asset.src = media.url; asset.alt = '測試附件'; asset.loading = 'lazy'; card.append(asset); }
     }
     root.append(card);
   }

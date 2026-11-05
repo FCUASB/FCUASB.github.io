@@ -8,6 +8,8 @@
 
 連線與資料接口見 [接入說明](docs/CONNECTION.md)。正式首頁已接通 Supabase 新回憶投稿；舊瀏覽器 IndexedDB 不會自動上傳。補充、檢舉及訪客新增音樂會仍使用本機流程。
 
+影片封面與點擊後才載入的行為、後端升級順序及驗證限制見 [影片載入說明](docs/VIDEO-LOADING.md)。
+
 Supabase 專案、GCP Drive API、服務帳號及 OAuth 準備步驟見 [雲端設定指南](docs/CLOUD-SETUP.md)。歷史設定文件需搭配 [最新進度](docs/CLOUD-PROGRESS.md) 閱讀。
 
 委託人、內容校對者與非程式人員可先讀 [網站規格書](docs/SPECIFICATION.md)，了解目前功能、已決定方向、限制及待確認事項。
