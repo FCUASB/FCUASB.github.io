@@ -4,6 +4,8 @@
   "mediaEndpoint": "https://rikgchswpjaxlnhdrxtw.supabase.co/functions/v1/media",
   "turnstileSiteKey": "0x4AAAAAAFkPHUuhuLs8awBO",
   "maxUploadBytes": 52428800,
+  "visitorEnabled": false,
+  "visitorEndpoint": "https://rikgchswpjaxlnhdrxtw.supabase.co/functions/v1/visitor",
   "catalogEnabled": true,
   "existingMemoriesEnabled": true,
   "catalogEndpoint": "https://rikgchswpjaxlnhdrxtw.supabase.co/functions/v1/catalog"

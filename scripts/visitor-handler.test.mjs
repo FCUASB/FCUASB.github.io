@@ -29,10 +29,11 @@ test('supplements and reports validate targets and content', () => {
   assert.equal(validateSupplement({ ...base, concertId: '123', text: '補充' }).targetId, '123');
   assert.throws(() => validateSupplement({ ...base, concertId: '123' }), /INVALID_INPUT/);
   assert.throws(() => validateSupplement({ ...base, concertId: 'abc', text: 'x' }), /INVALID_INPUT/);
-  assert.equal(validateReport({ ...base, targetKind: 'memory', targetId: '1000000000000001', type: '資料有誤', detail: '說明' }).body.type, '資料有誤');
-  assert.throws(() => validateReport({ ...base, targetKind: 'user', targetId: '1', type: '資料有誤', detail: 'x' }), /INVALID_INPUT/);
+  assert.equal(validateReport({ ...base, targetKind: 'memory', targetId: '1000000000000001', type: '資料錯誤', detail: '說明', contact: 'a@b.c' }).body.type, '資料錯誤');
+  assert.equal(validateReport({ ...base, targetKind: 'site', targetId: 'ignored', type: '資料錯誤', detail: '說明' }).targetId, 'general');
+  assert.throws(() => validateReport({ ...base, targetKind: 'user', targetId: '1', type: '資料錯誤', detail: 'x' }), /INVALID_INPUT/);
   assert.throws(() => validateReport({ ...base, targetKind: 'concert', targetId: '1', type: '亂寫', detail: 'x' }), /INVALID_INPUT/);
-  assert.throws(() => validateReport({ ...base, targetKind: 'concert', targetId: '1', type: '資料有誤', detail: '' }), /INVALID_INPUT/);
+  assert.throws(() => validateReport({ ...base, targetKind: 'concert', targetId: '1', type: '資料錯誤', detail: '' }), /INVALID_INPUT/);
 });
 function harness(over = {}) {
   const calls = { concert: [], contribution: [], rates: [], tokens: [] };
@@ -56,7 +57,7 @@ test('the handler verifies the challenge after validation and before any write, 
   assert.equal(calls.concert.length, 1); assert.equal('email' in calls.concert[0].document, false); assert.deepEqual(calls.tokens.at(-1), ['good', 'https://dalu.tw']);
   const s = await post({ type: 'supplement', payload: { ...base, concertId: '5', text: '補充' }, challengeToken: 'good' });
   assert.equal(s.status, 201); assert.equal(calls.contribution[0].kind, 'supplement');
-  const r = await post({ type: 'report', payload: { ...base, targetKind: 'concert', targetId: '5', type: '資料有誤', detail: '說明' }, challengeToken: 'good' });
+  const r = await post({ type: 'report', payload: { ...base, targetKind: 'concert', targetId: '5', type: '資料錯誤', detail: '說明' }, challengeToken: 'good' });
   assert.equal(r.status, 201); assert.equal(calls.contribution[1].kind, 'report');
 });
 test('origin, method, size, rate limit and disabled deployments are refused without writing', async () => {

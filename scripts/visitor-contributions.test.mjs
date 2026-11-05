@@ -51,7 +51,7 @@ test('supplements are public additions with caps; reports stay private; moderati
     for (let n = 13; n <= 31; n++) await rpc('archive_visitor_contribution', supplement(n));
     await assert.rejects(rpc('archive_visitor_contribution', supplement(99)), /supplement limit/);
     // Reports never appear in the public projection.
-    const report = await rpc('archive_visitor_contribution', JSON.stringify({ idempotencyKey: key(200), kind: 'report', targetKind: 'memory', targetId: '1000000000000001', name: '訪客', body: { type: '資料有誤', detail: '說明' } }));
+    const report = await rpc('archive_visitor_contribution', JSON.stringify({ idempotencyKey: key(200), kind: 'report', targetKind: 'memory', targetId: '1000000000000001', name: '訪客', body: { type: '資料錯誤', detail: '說明' } }));
     assert.equal((await rpc('archive_catalog_supplements')).length, 20);
     const reports = await adminCall('list', { kind: 'report' });
     assert.equal(reports.length, 1); assert.equal(reports[0].id, report.id);

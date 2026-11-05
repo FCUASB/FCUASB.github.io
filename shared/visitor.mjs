@@ -11,7 +11,7 @@ const text = (value, max, required = false) => {
 };
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 export const MAX_ROWS = 50;
-export const REPORT_TYPES = ['資料有誤', '內容不當', '涉及隱私或版權', '其他'];
+export const REPORT_TYPES = ['照片誤植', '資料錯誤', '要求移除照片或影片', '音樂會資料需要修正', '檢舉不適當內容'];
 function rows(value) {
   if (value == null) return [];
   if (!Array.isArray(value) || value.length > MAX_ROWS) fail();
@@ -63,10 +63,10 @@ export function validateSupplement(input) {
 export function validateReport(input) {
   const base = envelope(input);
   const targetKind = input.targetKind;
-  if (!['concert', 'memory'].includes(targetKind)) fail();
-  const targetId = text(input.targetId == null ? '' : String(input.targetId), 64, true);
+  if (!['concert', 'memory', 'site'].includes(targetKind)) fail();
+  const targetId = targetKind === 'site' ? 'general' : text(input.targetId == null ? '' : String(input.targetId), 64, true);
   if (!/^[A-Za-z0-9-]{1,64}$/.test(targetId)) fail();
   if (!REPORT_TYPES.includes(input.type)) fail();
   const detail = text(input.detail, 2000, true);
-  return { idempotencyKey: base.idempotencyKey, kind: 'report', targetKind, targetId, name: base.name, body: { type: input.type, detail } };
+  return { idempotencyKey: base.idempotencyKey, kind: 'report', targetKind, targetId, name: base.name, body: { type: input.type, detail, contact: text(input.contact, 200) } };
 }

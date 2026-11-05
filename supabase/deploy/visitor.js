@@ -140,7 +140,7 @@
   };
   var UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   var MAX_ROWS = 50;
-  var REPORT_TYPES = ["\u8CC7\u6599\u6709\u8AA4", "\u5167\u5BB9\u4E0D\u7576", "\u6D89\u53CA\u96B1\u79C1\u6216\u7248\u6B0A", "\u5176\u4ED6"];
+  var REPORT_TYPES = ["\u7167\u7247\u8AA4\u690D", "\u8CC7\u6599\u932F\u8AA4", "\u8981\u6C42\u79FB\u9664\u7167\u7247\u6216\u5F71\u7247", "\u97F3\u6A02\u6703\u8CC7\u6599\u9700\u8981\u4FEE\u6B63", "\u6AA2\u8209\u4E0D\u9069\u7576\u5167\u5BB9"];
   function rows(value) {
     if (value == null) return [];
     if (!Array.isArray(value) || value.length > MAX_ROWS) fail();
@@ -208,12 +208,12 @@
   function validateReport(input) {
     const base2 = envelope(input);
     const targetKind = input.targetKind;
-    if (!["concert", "memory"].includes(targetKind)) fail();
-    const targetId = text(input.targetId == null ? "" : String(input.targetId), 64, true);
+    if (!["concert", "memory", "site"].includes(targetKind)) fail();
+    const targetId = targetKind === "site" ? "general" : text(input.targetId == null ? "" : String(input.targetId), 64, true);
     if (!/^[A-Za-z0-9-]{1,64}$/.test(targetId)) fail();
     if (!REPORT_TYPES.includes(input.type)) fail();
     const detail = text(input.detail, 2e3, true);
-    return { idempotencyKey: base2.idempotencyKey, kind: "report", targetKind, targetId, name: base2.name, body: { type: input.type, detail } };
+    return { idempotencyKey: base2.idempotencyKey, kind: "report", targetKind, targetId, name: base2.name, body: { type: input.type, detail, contact: text(input.contact, 200) } };
   }
 
   // supabase/functions/visitor/handler.mjs

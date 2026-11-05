@@ -16,7 +16,7 @@ create table archive_private.visitor_receipts(
 create table archive_private.catalog_contributions(
   id uuid primary key default gen_random_uuid(),
   kind text not null check(kind in ('supplement','report')),
-  target_kind text not null check(target_kind in ('concert','memory')),
+  target_kind text not null check(target_kind in ('concert','memory','site')),
   target_id text not null check(target_id ~ '^[A-Za-z0-9-]{1,64}$'),
   display_name text not null check(char_length(display_name) between 1 and 200),
   body jsonb not null check(jsonb_typeof(body)='object' and octet_length(body::text)<=20000),
@@ -66,7 +66,7 @@ declare v_key uuid:=(p_record->>'idempotencyKey')::uuid; v_kind text:=p_record->
 begin
   select target into v_old from archive_private.visitor_receipts where idempotency_key=v_key;
   if v_old is not null then return jsonb_build_object('id',v_old,'status','received'); end if;
-  if v_kind not in ('supplement','report') or v_tk not in ('concert','memory') or (v_kind='supplement' and v_tk<>'concert') then raise exception 'invalid kind' using errcode='22023'; end if;
+  if v_kind not in ('supplement','report') or v_tk not in ('concert','memory','site') or (v_kind='supplement' and v_tk<>'concert') then raise exception 'invalid kind' using errcode='22023'; end if;
   if v_kind='supplement' then
     if not exists(select 1 from archive_private.catalog_entries where kind='concert' and entry_id=v_tid and deleted_at is null) then raise exception 'target missing' using errcode='P0002'; end if;
     if (select count(*) from archive_private.catalog_contributions where kind='supplement' and target_id=v_tid and hidden_at is null)>=20 then raise exception 'supplement limit' using errcode='22023'; end if;
