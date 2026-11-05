@@ -6,7 +6,7 @@
 
 第一次接手可先讀 [專案導覽：入口、檔案與互動流程](docs/PROJECT-GUIDE.md)，快速了解三個頁面入口、來源與發布檔的關係、各項互動的程式位置，以及雲端／本機資料的差別。
 
-連線與資料接口見 [接入說明](docs/CONNECTION.md)。正式首頁已接通 Supabase 新回憶投稿；舊瀏覽器 IndexedDB 不會自動上傳。補充、檢舉及訪客新增音樂會仍使用本機流程。
+連線與資料接口見 [接入說明](docs/CONNECTION.md)。正式首頁已接通 Supabase 新回憶投稿；舊瀏覽器 IndexedDB 不會自動上傳。訪客新增音樂會、補充與回報也已接通雲端（見 [docs/VISITOR-CONTRIBUTIONS.md](docs/VISITOR-CONTRIBUTIONS.md)）：新增與補充直接公開，回報只送管理員。
 
 影片封面與點擊後才載入的行為、後端升級順序及驗證限制見 [影片載入說明](docs/VIDEO-LOADING.md)。
 
@@ -45,7 +45,7 @@ npm run serve
 
 編輯 `handoff-v1.1/工程檔/content.json`，在根目錄執行 `npm run build`，提交來源與同步後的兩份 `index.html`。不要直接手改發布 HTML。
 
-完整功能說明、資料來源、人工校對與已知限制見 [handoff-v1.1/README.md](handoff-v1.1/README.md)。新回憶使用雲端收件；既有瀏覽器本機內容保留在原瀏覽器，不會自動搬移。
+完整功能說明、資料來源、人工校對與已知限制見 [handoff-v1.1/README.md](handoff-v1.1/README.md)。新回憶、新增音樂會、補充與回報使用雲端收件；既有瀏覽器本機內容保留在原瀏覽器，不會自動搬移，也不再顯示。
 
 
 ## 首頁雲端接入
