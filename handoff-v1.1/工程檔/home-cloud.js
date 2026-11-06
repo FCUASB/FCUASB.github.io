@@ -5,6 +5,7 @@ async function startHomepageCloud(){
  const sync=createAcceptanceSync({read:async()=>{
   const previousMemories=new Map(MEM.filter(m=>m.cloud).map(m=>[m.id,m]));
   const results=await Promise.allSettled([ProjectCloud.refresh(),...(typeof ProjectCatalog==='undefined'?[]:[ProjectCatalog.refresh()])]);
+  ProjectPresentation.sync(results[0].status==='fulfilled');
   storageState.albumIds=storageState.albumIds.filter(id=>MEM.some(m=>m.id===id));
   const previous=previousMemories.get(ltId);
   if(previous&&lt.open){const current=MEM.find(m=>m.id===ltId);if(!current){lt.close();toast('這則投稿已下架。')}else if(JSON.stringify(previous)!==JSON.stringify(current))drawLight()}

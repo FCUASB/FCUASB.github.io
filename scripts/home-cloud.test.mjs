@@ -12,6 +12,7 @@ function page(){
   addEventListener(name,fn){events[name]=fn},location:{hash:''},toast(){},route(){context.routes++},routes:0,drawLight(){context.draws++},draws:0,
   $:selector=>selector==='#cloud-sync-status'?status:button,
   ProjectCloud:{enabled:()=>true,refresh:async()=>{}},
+  ProjectPresentation:{sync(){}},
   setTimeout(fn,delay){assert.equal(delay,10000);timers.set(++timerId,fn);return timerId},
   clearTimeout(id){timers.delete(id)},
   createAcceptanceSync(options){config=options;return createAcceptanceSync(options)}});
