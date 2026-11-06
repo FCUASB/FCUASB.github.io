@@ -47,7 +47,17 @@ document.addEventListener('click',e=>{if(e.target.closest('[data-sources]'))show
 function setupBackgroundMusic(){
  const button=$('#musicBtn'),panel=$('#background-music'),mount=$('#music-frame');
  const close=()=>{mount.replaceChildren();panel.hidden=true;button.textContent='♪ 播放音樂';button.setAttribute('aria-expanded','false')};
- button.textContent='♪ 播放音樂';button.disabled=false;button.title='Simple Gift: Here Take This Lovely Flower';button.onclick=()=>{if(!panel.hidden){close();return}panel.hidden=false;button.textContent='■ 關閉音樂';button.setAttribute('aria-expanded','true');if(location.protocol==='file:'){mount.innerHTML='<p class="music-local">請在 YouTube 播放這首音樂。</p>'}else{const frame=document.createElement('iframe');frame.src='https://www.youtube-nocookie.com/embed/n7mhsJLAsVk?autoplay=1&loop=1&playlist=n7mhsJLAsVk&rel=0';frame.title='Simple Gift: Here Take This Lovely Flower — Frank Ticheli';frame.allow='autoplay; encrypted-media; picture-in-picture; fullscreen';frame.referrerPolicy='strict-origin-when-cross-origin';frame.allowFullscreen=true;mount.replaceChildren(frame)}};
+ button.textContent='♪ 播放音樂';button.disabled=false;button.title='Simple Gift: Here Take This Lovely Flower';button.onclick=()=>{if(!panel.hidden){close();return}panel.hidden=false;button.textContent='■ 關閉音樂';button.setAttribute('aria-expanded','true');if(location.protocol==='file:'){mount.innerHTML='<p class="music-local">請在 YouTube 播放這首音樂。</p>'}else mount.replaceChildren(createBackgroundMusicFrame())};
  $('#music-close').onclick=close;
  document.addEventListener('click',e=>{const b=e.target.closest('[data-mem]');if(b&&MEM.find(m=>m.id===Number(b.dataset.mem))?.type==='video')close();if(e.target.closest('[data-con]'))close()});
+}
+
+function createBackgroundMusicFrame(){
+ const frame=document.createElement('iframe');
+ frame.src='https://www.youtube-nocookie.com/embed/n7mhsJLAsVk?autoplay=1&loop=1&playlist=n7mhsJLAsVk&rel=0';
+ frame.title='Simple Gift: Here Take This Lovely Flower — Frank Ticheli';
+ frame.allow='autoplay; encrypted-media; picture-in-picture; fullscreen';
+ frame.referrerPolicy='strict-origin-when-cross-origin';
+ frame.allowFullscreen=true;
+ return frame;
 }

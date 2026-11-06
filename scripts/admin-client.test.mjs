@@ -72,13 +72,13 @@ class Element {
 }
 const submission={id:'synthetic-id',name:'Synthetic',body:'Synthetic text',createdAt:'2026-11-05T00:00:00Z',attachments:[{filename:'synthetic.mp4',source:'upload',status:'pending'}]};
 async function adminPage() {
-  const nodes=new Map(),timers=new Map(),events={},calls=[];let timerId=0,callback,rows=[],failure=false,hold,token='synthetic',signIns=0;
+  const nodes=new Map(),timers=new Map(),events={},calls=[];let timerId=0,callback,rows=[],failure=false,hold,token='synthetic',signIns=0,catalogReads=0;
   const node=id=>{if(!nodes.has(id))nodes.set(id,new Element());return nodes.get(id);};
   node('filter').value='all';node('archive-panel').hidden=true;
   const document={hidden:false,getElementById:node,createElement:tag=>new Element(tag),addEventListener(name,fn){events[name]=fn;}};
   const context=vm.createContext({document,location:{hash:'',origin:'https://example.test'},URLSearchParams,AbortController,AbortSignal,
     window:{addEventListener(name,fn){events[name]=fn;}},
-    mountCatalog(){return {enter(){node('submissions-panel').hidden=false;},clear(){},refresh:async()=>true};},
+    mountCatalog(){return {enter(){node('submissions-panel').hidden=false;},clear(){},refresh:async()=>{catalogReads++;return true}};},
     createAdminSync:options=>createAdminSync({...options,setTimer(fn,delay){assert.equal(delay,5000);timers.set(++timerId,fn);return timerId;},clearTimer(id){timers.delete(id);}}),
     createClient(){return {auth:{onAuthStateChange(fn){callback=fn;},getSession:async()=>({data:{session:{access_token:token,user:{}}}}),signInWithPassword(){signIns++;throw Error('Unexpected sign-in');}}};},
     fetch:async(url,options)=>{
@@ -93,7 +93,7 @@ async function adminPage() {
   await context.run();await context.poll();
   const text=node=>[node.textContent,...node.children.map(text)].join(' ');
   return {node,context,document,events,calls,timers,text,setRows(value){rows=value;},setFailure(value){failure=value;},
-    setToken(value){token=value;callback('TOKEN_REFRESHED');},signIns:()=>signIns,
+    setToken(value){token=value;callback('TOKEN_REFRESHED');},signIns:()=>signIns,catalogReads:()=>catalogReads,
     holdSearch(){let deliver;hold=new Promise(resolve=>{deliver=resolve;});return rows=>deliver(Response.json({result:rows}));},
     async tick(){const [id,fn]=timers.entries().next().value;timers.delete(id);fn();await context.poll();},
     logout(){callback('SIGNED_OUT');}};
@@ -130,6 +130,17 @@ test('admin sync pauses while hidden or editing and resumes through focus withou
     p.node('edit-dialog').open=true;p.node('edit-body').value='draft';await p.tick();
     assert.equal(p.calls.filter(c=>c.action==='search').length,searches);assert.equal(p.node('edit-body').value,'draft');
     p.node('edit-dialog').open=false;p.events.focus();await p.context.poll();assert.equal(p.calls.filter(c=>c.action==='search').length,searches+1);
+  }finally{p.logout();}
+});
+
+test('the admin five-second timer refreshes concerts through the catalog and pauses for concert drafts',async()=>{
+  const p=await adminPage();try{
+    p.node('submissions-panel').hidden=true;p.node('concert-panel').hidden=false;
+    const searches=p.calls.filter(c=>c.action==='search').length;
+    await p.tick();assert.equal(p.catalogReads(),1);assert.equal(p.calls.filter(c=>c.action==='search').length,searches);
+    p.node('catalog-edit-dialog').open=true;p.node('catalog-edit-form').value='concert draft';
+    await p.tick();assert.equal(p.catalogReads(),1);assert.equal(p.node('catalog-edit-form').value,'concert draft');
+    p.node('catalog-edit-dialog').open=false;p.events.focus();await p.context.poll();assert.equal(p.catalogReads(),2);
   }finally{p.logout();}
 });
 

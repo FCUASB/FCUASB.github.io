@@ -12,7 +12,6 @@ const ProjectCatalog=(()=>{
    if(result?.schemaVersion!==1||!Array.isArray(result.concerts)||result.concerts.length>500||!result.biography)throw Error();
    const biography=validateCatalogDocument('biography',result.biography),concerts=result.concerts.map(c=>validateCatalogDocument('concert',c));
    if(new Set(concerts.map(c=>c.id)).size!==concerts.length)throw Error();
-   const suppChanged=ProjectVisitor.load(result.supplements);
    let memories,managedIds;
    if(CLOUD_CONFIG.existingMemoriesEnabled){
     if(!Array.isArray(result.memories)||result.memories.length>500||!Array.isArray(result.managedMemoryIds)||result.managedMemoryIds.length>500)throw Error();
@@ -23,6 +22,7 @@ const ProjectCatalog=(()=>{
     if(new Set(memories.map(m=>m.id)).size!==memories.length||memories.some(m=>!managedIds.has(m.id)||(m.type!=='text'&&!ASSETS[m.asset])))throw Error();
    }
    if(currentVersion!==version)return;
+   const suppChanged=ProjectVisitor.load(result.supplements);
    const next=JSON.stringify(result);
    if(next!==fingerprint){
     const viewed=J.view==='concert'?CON.find(c=>c.id===J.id):null;

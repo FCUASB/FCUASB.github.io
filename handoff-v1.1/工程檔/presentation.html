@@ -1,0 +1,39 @@
+<main id="presentation" class="presentation" aria-label="大呂紀念展映" hidden>
+  <header class="presentation-header">
+    <a href="#memories" class="presentation-back">← 回紀念網站</a>
+    <details class="presentation-controls">
+      <summary>展映控制</summary>
+      <div class="presentation-options">
+        <button id="presentation-fullscreen" type="button">切換全螢幕</button>
+        <button id="presentation-pause" type="button" aria-pressed="false" disabled>暫停輪播</button>
+        <button id="presentation-next" type="button" disabled>下一張</button>
+        <button id="presentation-music" type="button" aria-pressed="false" disabled>播放音樂</button>
+        <button id="presentation-live" type="button" aria-pressed="false">暫停新投稿上屏</button>
+        <label><input id="presentation-show-qr" type="checkbox" checked> 顯示投稿 QR Code</label>
+        <label>大小
+          <select id="presentation-qr-size">
+            <option value="small">小</option>
+            <option value="medium" selected>中</option>
+            <option value="large">大</option>
+          </select>
+        </label>
+        <label>位置
+          <select id="presentation-qr-side">
+            <option value="right" selected>右下角</option>
+            <option value="left">左下角</option>
+          </select>
+        </label>
+        <p id="presentation-sync" role="status"></p>
+      </div>
+    </details>
+  </header>
+  <div id="presentation-slide" class="presentation-slide"></div>
+  <div class="presentation-dock">
+    <div id="presentation-player" class="presentation-player" hidden></div>
+    <a id="presentation-qr" class="presentation-qr" href="#share-memory">
+      <!-- presentation-qr -->
+      <span>掃碼留下你的回憶</span>
+    </a>
+  </div>
+  <div id="presentation-notes" class="presentation-notes" aria-hidden="true"></div>
+</main>

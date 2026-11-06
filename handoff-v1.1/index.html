@@ -365,6 +365,194 @@ form input[type=email],form input[type=tel],form input[type=url]{font:inherit;fo
 
 .catalog-status{max-width:1080px;margin:12px auto;padding:0 20px;font-size:.85rem}.catalog-pending #catalog-biography,.catalog-pending #catalog-biography-more,.catalog-pending #careerBody,.catalog-pending #jBody,.catalog-pending #jDetail,.catalog-pending #stats,.catalog-pending #previewCards{display:none!important}
 
+body.presentation-active > :is(.site-head, .catalog-status, footer, #home, #journey, #mobileUpload) {
+  display: none;
+}
+
+#presentation-entry { color: var(--gold); }
+
+.presentation {
+  --qr-size: 134px;
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  min-height: 100svh;
+  padding: max(16px, env(safe-area-inset-top)) max(clamp(14px, 3vw, 54px), env(safe-area-inset-right))
+    max(16px, env(safe-area-inset-bottom)) max(clamp(14px, 3vw, 54px), env(safe-area-inset-left));
+  color: var(--on-night);
+  background: radial-gradient(ellipse at 65% 12%, #2e4561, var(--night) 65%);
+}
+
+.presentation:fullscreen { overflow: auto; }
+.presentation[data-qr-size="small"] { --qr-size: 100px; }
+.presentation[data-qr-size="large"] { --qr-size: 176px; }
+
+.presentation::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(0deg, #c7a56b24 0 1px, transparent 1px 13px) center 36% / 100% 53px no-repeat;
+}
+
+.presentation-header {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.presentation-back, .presentation-controls summary {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--gold);
+  font-size: .9rem;
+}
+
+.presentation-controls summary { justify-content: end; cursor: pointer; }
+.presentation-controls summary::before { content: "⚙"; margin-right: .45em; }
+.presentation-options {
+  position: absolute;
+  top: 44px;
+  right: 0;
+  width: min(320px, 100%);
+  display: grid;
+  gap: 7px;
+  padding: 14px;
+  border: 1px solid #c7a56b66;
+  background: var(--night);
+  box-shadow: 0 10px 32px #0006;
+  max-height: max(70px, min(68svh, calc(100svh - 290px)));
+  overflow: auto;
+}
+
+.presentation-options :is(button, select) {
+  min-height: 44px;
+  padding: 5px 10px;
+  border: 1px solid #c7a56b66;
+  border-radius: 2px;
+  color: var(--on-night);
+  background: #26384f;
+  font: inherit;
+  font-size: .9rem;
+  cursor: pointer;
+}
+
+.presentation-options button[aria-pressed="true"] { background: var(--gold); color: var(--night); }
+.presentation-options button:disabled { opacity: .55; cursor: default; }
+.presentation-options label { display: flex; align-items: center; gap: 8px; min-height: 44px; font-size: .9rem; }
+.presentation-options input { accent-color: var(--gold); width: 18px; height: 18px; }
+.presentation-options p { margin: 0; color: var(--gold); font-size: .85rem; }
+
+.presentation-slide {
+  width: min(100%, 1150px);
+  margin: auto;
+  display: grid;
+  align-items: center;
+  justify-items: center;
+  gap: clamp(16px, 4vw, 60px);
+  padding: clamp(14px, 3vh, 36px) 0;
+  overflow-wrap: anywhere;
+}
+
+.presentation-slide.has-image { grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); }
+.presentation-slide:not(.has-image) { text-align: center; }
+.presentation-slide figure { margin: 0; width: 100%; text-align: center; }
+.presentation-slide img {
+  display: block;
+  max-width: 100%;
+  max-height: min(43svh, 490px);
+  width: auto;
+  height: auto;
+  margin: 0 auto;
+  border: 1px solid #c7a56b66;
+  object-fit: contain;
+}
+
+.presentation-slide h1, .presentation-slide h2 {
+  color: var(--on-night);
+  font-size: clamp(1.8rem, 4.1vw, 3.75rem);
+  line-height: 1.2;
+  margin: .2em 0 .35em;
+}
+
+.presentation-kicker {
+  margin: 0;
+  color: var(--gold);
+  font: 600 clamp(.9rem, 1.6vw, 1.25rem) / 1.5 var(--serif);
+  letter-spacing: .12em;
+}
+
+.presentation-copy { width: 100%; max-width: 40rem; }
+.presentation-story {
+  margin: .6em 0;
+  color: #f4efe4;
+  font-size: clamp(1.05rem, 2.25vw, 1.85rem);
+  line-height: 1.6;
+  white-space: pre-line;
+}
+
+.presentation-meta, .presentation-slide figcaption {
+  margin: 8px 0 0;
+  color: #d9c9ad;
+  font-size: clamp(.78rem, 1.25vw, 1.05rem);
+}
+
+.presentation :is(.source-link, .presentation-meta a) { color: #e4c992; }
+.presentation-start { margin-top: 14px; }
+.presentation-dock { position: relative; z-index: 1; display: flex; align-items: end; justify-content: space-between; gap: 12px; }
+.presentation-player { width: clamp(200px, 22vw, 360px); flex: 0 0 auto; }
+.presentation-player iframe { display: block; width: 100%; height: 200px; border: 0; }
+.presentation-player p { margin: 0; font-size: .85rem; }
+.presentation-qr {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  margin-left: auto;
+  color: var(--on-night);
+  text-align: center;
+  text-decoration: none;
+  font-size: clamp(.7rem, 1.2vw, .95rem);
+}
+
+.presentation-qr svg { display: block; width: var(--qr-size); max-width: 28vw; height: auto; }
+.presentation[data-qr-side="left"] .presentation-qr { order: -1; margin-left: 0; margin-right: auto; }
+.presentation-notes { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.presentation-note {
+  position: absolute;
+  bottom: 8%;
+  left: var(--note-left);
+  color: var(--gold);
+  font-size: clamp(2rem, 5vw, 4rem);
+  text-shadow: 0 0 16px #172438;
+  animation: presentation-note 3.8s ease-out both;
+}
+
+@keyframes presentation-note {
+  0% { opacity: 0; transform: translateY(12px) rotate(-14deg); }
+  20% { opacity: 1; }
+  100% { opacity: 0; transform: translate(30px, -66vh) rotate(14deg); }
+}
+
+@media (max-width: 600px) {
+  .presentation-slide.has-image { grid-template-columns: 1fr; text-align: center; gap: 12px; }
+  .presentation-slide img { max-height: 24svh; }
+  .presentation[data-qr-size="small"] { --qr-size: 66px; }
+  .presentation[data-qr-size="large"] { --qr-size: 110px; }
+  .presentation { --qr-size: 84px; }
+  .presentation-qr { max-width: 28vw; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .presentation-note { animation: presentation-note-fade 3s both; }
+  @keyframes presentation-note-fade { 0%, 100% { opacity: 0; } 25%, 75% { opacity: 1; } }
+}
+
 </style>
 </head>
 <body class="catalog-pending"><p class="catalog-status" data-catalog-status role="status">正在載入音樂會與大呂生平……</p>
@@ -397,6 +585,7 @@ form input[type=email],form input[type=tel],form input[type=url]{font:inherit;fo
         <button class="btn gold" type="button" data-open="upload">留下我與大呂的回憶</button>
         <a class="btn ghost-night" href="#journey">探索大呂的音樂足跡</a>
       </div>
+      <a href="#present" id="presentation-entry">開啟紀念展映 ↗</a>
     </div>
     <button class="music-btn" id="musicBtn" type="button" aria-expanded="false" aria-controls="background-music">♪ 播放音樂</button>
   </div>
@@ -521,6 +710,49 @@ form input[type=email],form input[type=tel],form input[type=url]{font:inherit;fo
 <dialog id="dlg-report" aria-labelledby="rp-h"></dialog>
 <dialog id="dlg-light" class="light" aria-label="照片檢視"></dialog>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
+<main id="presentation" class="presentation" aria-label="大呂紀念展映" hidden>
+  <header class="presentation-header">
+    <a href="#memories" class="presentation-back">← 回紀念網站</a>
+    <details class="presentation-controls">
+      <summary>展映控制</summary>
+      <div class="presentation-options">
+        <button id="presentation-fullscreen" type="button">切換全螢幕</button>
+        <button id="presentation-pause" type="button" aria-pressed="false" disabled>暫停輪播</button>
+        <button id="presentation-next" type="button" disabled>下一張</button>
+        <button id="presentation-music" type="button" aria-pressed="false" disabled>播放音樂</button>
+        <button id="presentation-live" type="button" aria-pressed="false">暫停新投稿上屏</button>
+        <label><input id="presentation-show-qr" type="checkbox" checked> 顯示投稿 QR Code</label>
+        <label>大小
+          <select id="presentation-qr-size">
+            <option value="small">小</option>
+            <option value="medium" selected>中</option>
+            <option value="large">大</option>
+          </select>
+        </label>
+        <label>位置
+          <select id="presentation-qr-side">
+            <option value="right" selected>右下角</option>
+            <option value="left">左下角</option>
+          </select>
+        </label>
+        <p id="presentation-sync" role="status"></p>
+      </div>
+    </details>
+  </header>
+  <div id="presentation-slide" class="presentation-slide"></div>
+  <div class="presentation-dock">
+    <div id="presentation-player" class="presentation-player" hidden></div>
+    <a id="presentation-qr" class="presentation-qr" href="#share-memory">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 33 33" data-url="https://dalu.tw/#share-memory" aria-hidden="true" focusable="false" shape-rendering="crispEdges">
+  <rect width="33" height="33" fill="#fff"/>
+  <path d="M4 4h1v1h-1zM5 4h1v1h-1zM6 4h1v1h-1zM7 4h1v1h-1zM8 4h1v1h-1zM9 4h1v1h-1zM10 4h1v1h-1zM13 4h1v1h-1zM14 4h1v1h-1zM16 4h1v1h-1zM19 4h1v1h-1zM22 4h1v1h-1zM23 4h1v1h-1zM24 4h1v1h-1zM25 4h1v1h-1zM26 4h1v1h-1zM27 4h1v1h-1zM28 4h1v1h-1zM4 5h1v1h-1zM10 5h1v1h-1zM14 5h1v1h-1zM15 5h1v1h-1zM16 5h1v1h-1zM19 5h1v1h-1zM20 5h1v1h-1zM22 5h1v1h-1zM28 5h1v1h-1zM4 6h1v1h-1zM6 6h1v1h-1zM7 6h1v1h-1zM8 6h1v1h-1zM10 6h1v1h-1zM12 6h1v1h-1zM13 6h1v1h-1zM14 6h1v1h-1zM16 6h1v1h-1zM19 6h1v1h-1zM20 6h1v1h-1zM22 6h1v1h-1zM24 6h1v1h-1zM25 6h1v1h-1zM26 6h1v1h-1zM28 6h1v1h-1zM4 7h1v1h-1zM6 7h1v1h-1zM7 7h1v1h-1zM8 7h1v1h-1zM10 7h1v1h-1zM13 7h1v1h-1zM14 7h1v1h-1zM16 7h1v1h-1zM18 7h1v1h-1zM19 7h1v1h-1zM22 7h1v1h-1zM24 7h1v1h-1zM25 7h1v1h-1zM26 7h1v1h-1zM28 7h1v1h-1zM4 8h1v1h-1zM6 8h1v1h-1zM7 8h1v1h-1zM8 8h1v1h-1zM10 8h1v1h-1zM14 8h1v1h-1zM15 8h1v1h-1zM17 8h1v1h-1zM18 8h1v1h-1zM19 8h1v1h-1zM20 8h1v1h-1zM22 8h1v1h-1zM24 8h1v1h-1zM25 8h1v1h-1zM26 8h1v1h-1zM28 8h1v1h-1zM4 9h1v1h-1zM10 9h1v1h-1zM13 9h1v1h-1zM15 9h1v1h-1zM17 9h1v1h-1zM19 9h1v1h-1zM20 9h1v1h-1zM22 9h1v1h-1zM28 9h1v1h-1zM4 10h1v1h-1zM5 10h1v1h-1zM6 10h1v1h-1zM7 10h1v1h-1zM8 10h1v1h-1zM9 10h1v1h-1zM10 10h1v1h-1zM12 10h1v1h-1zM14 10h1v1h-1zM16 10h1v1h-1zM18 10h1v1h-1zM20 10h1v1h-1zM22 10h1v1h-1zM23 10h1v1h-1zM24 10h1v1h-1zM25 10h1v1h-1zM26 10h1v1h-1zM27 10h1v1h-1zM28 10h1v1h-1zM12 11h1v1h-1zM13 11h1v1h-1zM14 11h1v1h-1zM17 11h1v1h-1zM20 11h1v1h-1zM4 12h1v1h-1zM5 12h1v1h-1zM6 12h1v1h-1zM8 12h1v1h-1zM9 12h1v1h-1zM10 12h1v1h-1zM11 12h1v1h-1zM12 12h1v1h-1zM14 12h1v1h-1zM17 12h1v1h-1zM19 12h1v1h-1zM20 12h1v1h-1zM21 12h1v1h-1zM22 12h1v1h-1zM26 12h1v1h-1zM4 13h1v1h-1zM7 13h1v1h-1zM8 13h1v1h-1zM11 13h1v1h-1zM12 13h1v1h-1zM14 13h1v1h-1zM16 13h1v1h-1zM17 13h1v1h-1zM21 13h1v1h-1zM22 13h1v1h-1zM28 13h1v1h-1zM4 14h1v1h-1zM6 14h1v1h-1zM8 14h1v1h-1zM9 14h1v1h-1zM10 14h1v1h-1zM13 14h1v1h-1zM18 14h1v1h-1zM22 14h1v1h-1zM24 14h1v1h-1zM26 14h1v1h-1zM27 14h1v1h-1zM28 14h1v1h-1zM7 15h1v1h-1zM11 15h1v1h-1zM16 15h1v1h-1zM17 15h1v1h-1zM18 15h1v1h-1zM20 15h1v1h-1zM27 15h1v1h-1zM4 16h1v1h-1zM5 16h1v1h-1zM6 16h1v1h-1zM8 16h1v1h-1zM10 16h1v1h-1zM15 16h1v1h-1zM16 16h1v1h-1zM17 16h1v1h-1zM21 16h1v1h-1zM22 16h1v1h-1zM25 16h1v1h-1zM27 16h1v1h-1zM28 16h1v1h-1zM5 17h1v1h-1zM16 17h1v1h-1zM17 17h1v1h-1zM18 17h1v1h-1zM20 17h1v1h-1zM21 17h1v1h-1zM22 17h1v1h-1zM25 17h1v1h-1zM28 17h1v1h-1zM4 18h1v1h-1zM6 18h1v1h-1zM10 18h1v1h-1zM12 18h1v1h-1zM13 18h1v1h-1zM14 18h1v1h-1zM17 18h1v1h-1zM18 18h1v1h-1zM20 18h1v1h-1zM21 18h1v1h-1zM23 18h1v1h-1zM26 18h1v1h-1zM27 18h1v1h-1zM28 18h1v1h-1zM5 19h1v1h-1zM6 19h1v1h-1zM9 19h1v1h-1zM12 19h1v1h-1zM13 19h1v1h-1zM15 19h1v1h-1zM16 19h1v1h-1zM17 19h1v1h-1zM19 19h1v1h-1zM20 19h1v1h-1zM21 19h1v1h-1zM24 19h1v1h-1zM27 19h1v1h-1zM4 20h1v1h-1zM5 20h1v1h-1zM8 20h1v1h-1zM10 20h1v1h-1zM11 20h1v1h-1zM14 20h1v1h-1zM15 20h1v1h-1zM16 20h1v1h-1zM17 20h1v1h-1zM20 20h1v1h-1zM21 20h1v1h-1zM22 20h1v1h-1zM23 20h1v1h-1zM24 20h1v1h-1zM25 20h1v1h-1zM12 21h1v1h-1zM14 21h1v1h-1zM16 21h1v1h-1zM17 21h1v1h-1zM20 21h1v1h-1zM24 21h1v1h-1zM25 21h1v1h-1zM27 21h1v1h-1zM28 21h1v1h-1zM4 22h1v1h-1zM5 22h1v1h-1zM6 22h1v1h-1zM7 22h1v1h-1zM8 22h1v1h-1zM9 22h1v1h-1zM10 22h1v1h-1zM12 22h1v1h-1zM13 22h1v1h-1zM14 22h1v1h-1zM19 22h1v1h-1zM20 22h1v1h-1zM22 22h1v1h-1zM24 22h1v1h-1zM25 22h1v1h-1zM27 22h1v1h-1zM28 22h1v1h-1zM4 23h1v1h-1zM10 23h1v1h-1zM12 23h1v1h-1zM13 23h1v1h-1zM15 23h1v1h-1zM16 23h1v1h-1zM17 23h1v1h-1zM18 23h1v1h-1zM20 23h1v1h-1zM24 23h1v1h-1zM25 23h1v1h-1zM4 24h1v1h-1zM6 24h1v1h-1zM7 24h1v1h-1zM8 24h1v1h-1zM10 24h1v1h-1zM12 24h1v1h-1zM13 24h1v1h-1zM16 24h1v1h-1zM17 24h1v1h-1zM18 24h1v1h-1zM20 24h1v1h-1zM21 24h1v1h-1zM22 24h1v1h-1zM23 24h1v1h-1zM24 24h1v1h-1zM25 24h1v1h-1zM27 24h1v1h-1zM4 25h1v1h-1zM6 25h1v1h-1zM7 25h1v1h-1zM8 25h1v1h-1zM10 25h1v1h-1zM13 25h1v1h-1zM16 25h1v1h-1zM19 25h1v1h-1zM20 25h1v1h-1zM23 25h1v1h-1zM24 25h1v1h-1zM25 25h1v1h-1zM26 25h1v1h-1zM4 26h1v1h-1zM6 26h1v1h-1zM7 26h1v1h-1zM8 26h1v1h-1zM10 26h1v1h-1zM12 26h1v1h-1zM13 26h1v1h-1zM14 26h1v1h-1zM19 26h1v1h-1zM21 26h1v1h-1zM24 26h1v1h-1zM28 26h1v1h-1zM4 27h1v1h-1zM10 27h1v1h-1zM12 27h1v1h-1zM13 27h1v1h-1zM15 27h1v1h-1zM16 27h1v1h-1zM17 27h1v1h-1zM18 27h1v1h-1zM19 27h1v1h-1zM20 27h1v1h-1zM24 27h1v1h-1zM25 27h1v1h-1zM27 27h1v1h-1zM4 28h1v1h-1zM5 28h1v1h-1zM6 28h1v1h-1zM7 28h1v1h-1zM8 28h1v1h-1zM9 28h1v1h-1zM10 28h1v1h-1zM12 28h1v1h-1zM13 28h1v1h-1zM14 28h1v1h-1zM15 28h1v1h-1zM16 28h1v1h-1zM17 28h1v1h-1zM20 28h1v1h-1zM21 28h1v1h-1zM22 28h1v1h-1zM23 28h1v1h-1zM27 28h1v1h-1zM28 28h1v1h-1z" fill="#172438"/>
+</svg>
+      <span>掃碼留下你的回憶</span>
+    </a>
+  </div>
+  <div id="presentation-notes" class="presentation-notes" aria-hidden="true"></div>
+</main>
+
 
 <script>
 // Explicit reads only, one in flight; failed reads never claim freshness.
@@ -889,7 +1121,6 @@ const ProjectCatalog=(()=>{
    if(result?.schemaVersion!==1||!Array.isArray(result.concerts)||result.concerts.length>500||!result.biography)throw Error();
    const biography=validateCatalogDocument('biography',result.biography),concerts=result.concerts.map(c=>validateCatalogDocument('concert',c));
    if(new Set(concerts.map(c=>c.id)).size!==concerts.length)throw Error();
-   const suppChanged=ProjectVisitor.load(result.supplements);
    let memories,managedIds;
    if(CLOUD_CONFIG.existingMemoriesEnabled){
     if(!Array.isArray(result.memories)||result.memories.length>500||!Array.isArray(result.managedMemoryIds)||result.managedMemoryIds.length>500)throw Error();
@@ -900,6 +1131,7 @@ const ProjectCatalog=(()=>{
     if(new Set(memories.map(m=>m.id)).size!==memories.length||memories.some(m=>!managedIds.has(m.id)||(m.type!=='text'&&!ASSETS[m.asset])))throw Error();
    }
    if(currentVersion!==version)return;
+   const suppChanged=ProjectVisitor.load(result.supplements);
    const next=JSON.stringify(result);
    if(next!==fingerprint){
     const viewed=J.view==='concert'?CON.find(c=>c.id===J.id):null;
@@ -1104,10 +1336,304 @@ document.addEventListener('click',e=>{if(e.target.closest('[data-sources]'))show
 function setupBackgroundMusic(){
  const button=$('#musicBtn'),panel=$('#background-music'),mount=$('#music-frame');
  const close=()=>{mount.replaceChildren();panel.hidden=true;button.textContent='♪ 播放音樂';button.setAttribute('aria-expanded','false')};
- button.textContent='♪ 播放音樂';button.disabled=false;button.title='Simple Gift: Here Take This Lovely Flower';button.onclick=()=>{if(!panel.hidden){close();return}panel.hidden=false;button.textContent='■ 關閉音樂';button.setAttribute('aria-expanded','true');if(location.protocol==='file:'){mount.innerHTML='<p class="music-local">請在 YouTube 播放這首音樂。</p>'}else{const frame=document.createElement('iframe');frame.src='https://www.youtube-nocookie.com/embed/n7mhsJLAsVk?autoplay=1&loop=1&playlist=n7mhsJLAsVk&rel=0';frame.title='Simple Gift: Here Take This Lovely Flower — Frank Ticheli';frame.allow='autoplay; encrypted-media; picture-in-picture; fullscreen';frame.referrerPolicy='strict-origin-when-cross-origin';frame.allowFullscreen=true;mount.replaceChildren(frame)}};
+ button.textContent='♪ 播放音樂';button.disabled=false;button.title='Simple Gift: Here Take This Lovely Flower';button.onclick=()=>{if(!panel.hidden){close();return}panel.hidden=false;button.textContent='■ 關閉音樂';button.setAttribute('aria-expanded','true');if(location.protocol==='file:'){mount.innerHTML='<p class="music-local">請在 YouTube 播放這首音樂。</p>'}else mount.replaceChildren(createBackgroundMusicFrame())};
  $('#music-close').onclick=close;
  document.addEventListener('click',e=>{const b=e.target.closest('[data-mem]');if(b&&MEM.find(m=>m.id===Number(b.dataset.mem))?.type==='video')close();if(e.target.closest('[data-con]'))close()});
 }
+
+function createBackgroundMusicFrame(){
+ const frame=document.createElement('iframe');
+ frame.src='https://www.youtube-nocookie.com/embed/n7mhsJLAsVk?autoplay=1&loop=1&playlist=n7mhsJLAsVk&rel=0';
+ frame.title='Simple Gift: Here Take This Lovely Flower — Frank Ticheli';
+ frame.allow='autoplay; encrypted-media; picture-in-picture; fullscreen';
+ frame.referrerPolicy='strict-origin-when-cross-origin';
+ frame.allowFullscreen=true;
+ return frame;
+}
+
+function presentationSlides(career, concerts, memories) {
+  const dated = [
+    ...career.map((entry, index) => ({
+      id: 'career-' + index, order: entry.timelineOrder, kind: 'career', entry
+    })),
+    ...concerts.map(entry => ({
+      id: 'concert-' + entry.id, order: entry.timelineOrder || Number(entry.date.replaceAll('-', '').padEnd(8, '0')),
+      kind: 'concert', entry
+    }))
+  ];
+  const undated = [];
+  for (const entry of memories) {
+    if (entry.local || entry.sample) continue;
+    const slide = {
+      id: 'memory-' + entry.id, order: entry.y * 10000 + (entry.m || 0) * 100,
+      kind: 'memory', entry
+    };
+    (entry.y ? dated : undated).push(slide);
+  }
+  dated.sort((a, b) => a.order - b.order);
+  undated.sort((a, b) => a.entry.createdAt - b.entry.createdAt || a.entry.id - b.entry.id);
+  return [...dated, ...undated];
+}
+
+const ProjectPresentation = (() => {
+  const root = $('#presentation');
+  const stage = $('#presentation-slide');
+  const player = $('#presentation-player');
+  const notes = $('#presentation-notes');
+  const syncStatus = $('#presentation-sync');
+  const controls = $('.presentation-controls', root);
+  const pause = $('#presentation-pause');
+  const next = $('#presentation-next');
+  const music = $('#presentation-music');
+  const live = $('#presentation-live');
+  const qr = $('#presentation-qr');
+  const qrSize = $('#presentation-qr-size');
+  const qrSide = $('#presentation-qr-side');
+  let running = false;
+  let paused = false;
+  let livePaused = false;
+  let hasMemorySnapshot = false;
+  let seen = null;
+  let startedAt;
+  let current = null;
+  let currentLive = false;
+  let timer;
+  let slides = new Map();
+  let regular = [];
+  const pending = new Map();
+
+  function collectSlides() {
+    const catalogReady = !document.body.classList.contains('catalog-pending');
+    const items = presentationSlides(catalogReady ? ARCHIVE.career : [], catalogReady ? CON : [], MEM);
+    slides = new Map(items.map(slide => [slide.id, slide]));
+  }
+
+  function welcome() {
+    const portrait = ASSETS['lu-portrait'];
+    render({
+      kicker: '現場展映 ・ In Loving Memory', title: '大呂的音樂，未完待續',
+      story: '那些一起演奏的日子，那些一起走過的時光。',
+      image: portrait.url, caption: '呂彥慶指揮', imageSource: portrait.source,
+      start: !running
+    });
+  }
+
+  function render({kicker, title, story, meta, note, image, caption, source, sourceName, imageSource, start}) {
+    stage.classList.toggle('has-image', !!image);
+    const heading = start ? 'h1' : 'h2';
+    stage.innerHTML = `
+      ${image ? `<figure><img src="${esc(image)}" alt="${esc(caption || title)}">
+        ${caption || imageSource ? `<figcaption>${esc(caption)} ${sourceLink(imageSource, '影像來源')}</figcaption>` : ''}</figure>` : ''}
+      <div class="presentation-copy">
+        <p class="presentation-kicker">${esc(kicker)}</p>
+        <${heading}>${esc(title)}</${heading}>
+        ${story ? `<p class="presentation-story">${esc(story)}</p>` : ''}
+        ${meta ? `<p class="presentation-meta">${esc(meta)}</p>` : ''}
+        ${note || source ? `<p class="presentation-meta">${esc(note)} ${sourceLink(source, sourceName || '資料來源')}</p>` : ''}
+        ${start ? '<button class="btn gold presentation-start" type="button">開始展映</button>' : ''}
+      </div>`;
+    $('figure img', stage)?.addEventListener('error', () => {
+      $('figure', stage)?.remove();
+      stage.classList.remove('has-image');
+    }, {once: true});
+  }
+
+  function showSlide(slide) {
+    current = slide;
+    const {entry, kind} = slide;
+    const source = entry.source;
+    const note = entry.sourceNote;
+    if (kind === 'career') {
+      render({
+        kicker: entry.label + ' ・ 大呂生平', title: entry.title, story: entry.description,
+        meta: entry.venue, source, note
+      });
+      return;
+    }
+    if (kind === 'concert') {
+      const image = ASSETS[entry.asset];
+      const state = {cancelled: '已取消', planned: '行前計畫，實際演出待核', 'date-pending': '演出日期待核對'};
+      render({
+        kicker: (entry.dateLabel || fmtDate(entry.date)) + ' ・ 音樂會紀錄',
+        title: entry.title, story: entry.story, image: image?.url, imageSource: image?.source,
+        caption: entry.imageLabel || image?.label, source, sourceName: entry.sourceName, note,
+        meta: [entry.ens, entry.place, entry.role, state[entry.status] || entry.status,
+          entry.origin === 'visitor' ? '親友新增，尚未核對' : ''].filter(Boolean).join(' ・ ')
+      });
+      return;
+    }
+    const chars = storyCharacters(entry.story);
+    const image = entry.media?.map(item => item.type === 'photo' || item.youtube ? item.url : item.poster).find(Boolean);
+    const type = currentLive ? '剛收到的回憶' : entry.y ? '親友回憶' : '親友的話';
+    render({
+      kicker: entry.y ? dateTxt(entry) + ' ・ ' + type : type, title: entry.n,
+      story: chars.length > 100 ? chars.slice(0, 100).join('') + '…' : entry.story,
+      meta: [entry.rel, entry.place].filter(Boolean).join(' ・ '), source, sourceName: entry.sourceName, note,
+      image: image || (entry.cloud ? '' : entry.src), imageSource: ASSETS[entry.asset]?.source
+    });
+  }
+
+  function schedule() {
+    clearTimeout(timer);
+    if (running && !paused && !document.hidden) timer = setTimeout(advance, 12000);
+  }
+
+  function advance() {
+    if (!running) return;
+    let id;
+    if (!livePaused && pending.size) {
+      id = pending.keys().next().value;
+      pending.delete(id);
+    }
+    currentLive = id !== undefined;
+    if (!currentLive) {
+      regular = regular.filter(key => slides.has(key) && !pending.has(key));
+      if (!regular.length) regular = [...slides.keys()].filter(key => !pending.has(key));
+      id = regular.shift();
+    }
+    if (id !== undefined) showSlide(slides.get(id));
+    else if (current) {
+      current = null;
+      welcome();
+    }
+    updateStatus();
+    schedule();
+  }
+
+  function floatNote() {
+    const note = document.createElement('span');
+    note.className = 'presentation-note';
+    note.textContent = '♪';
+    note.style.setProperty('--note-left', (10 + Math.random() * 75) + '%');
+    note.addEventListener('animationend', () => note.remove(), {once: true});
+    notes.append(note);
+  }
+
+  let memorySyncFailed = false;
+  function updateStatus() {
+    const message = memorySyncFailed ? '投稿暫時無法同步，稍後重試。' :
+      hasMemorySnapshot ? '公開投稿每 10 秒同步。' : '正在讀取公開投稿。';
+    syncStatus.textContent = message + (pending.size ? ` 等候上屏 ${pending.size} 則。` : '');
+  }
+
+  function sync(memorySucceeded) {
+    hasMemorySnapshot ||= memorySucceeded;
+    memorySyncFailed = !memorySucceeded;
+    if (root.hidden || !running) {
+      updateStatus();
+      return;
+    }
+    collectSlides();
+    for (const id of pending.keys()) if (!slides.has(id)) pending.delete(id);
+    if (memorySucceeded) {
+      const cloud = MEM.filter(entry => entry.cloud).sort((a, b) => a.createdAt - b.createdAt || a.id - b.id);
+      seen ??= new Set(cloud.filter(entry => !(entry.createdAt >= startedAt)).map(entry => 'memory-' + entry.id));
+      for (const entry of cloud) {
+        const id = 'memory-' + entry.id;
+        if (seen.has(id)) continue;
+        seen.add(id);
+        pending.set(id, !livePaused);
+        if (!livePaused) floatNote();
+      }
+    }
+    if (current) {
+      const updated = slides.get(current.id);
+      if (!updated) advance();
+      else if (updated.entry !== current.entry) showSlide(updated);
+    }
+    updateStatus();
+  }
+
+  function toggleFullscreen() {
+    if (document.fullscreenElement === root) {
+      void document.exitFullscreen().catch(() => {});
+    } else {
+      root.requestFullscreen?.().catch(() => {});
+    }
+  }
+
+  function setMusic(on) {
+    if (on) {
+      const frame = createBackgroundMusicFrame();
+      player.replaceChildren(frame);
+      player.hidden = false;
+    } else {
+      player.hidden = true;
+      player.replaceChildren();
+    }
+    music.setAttribute('aria-pressed', String(on));
+    music.textContent = on ? '停止音樂' : '播放音樂';
+  }
+
+  stage.addEventListener('click', event => {
+    if (!event.target.closest('.presentation-start')) return;
+    running = true;
+    startedAt = Date.now();
+    seen = hasMemorySnapshot ? new Set(MEM.filter(entry => entry.cloud).map(entry => 'memory-' + entry.id)) : null;
+    collectSlides();
+    regular = [...slides.keys()];
+    toggleFullscreen();
+    if (location.protocol !== 'file:') setMusic(true);
+    pause.disabled = next.disabled = false;
+    music.disabled = location.protocol === 'file:';
+    $('summary', controls).focus();
+    welcome();
+    schedule();
+  });
+
+  $('#presentation-fullscreen').onclick = toggleFullscreen;
+  next.onclick = advance;
+  pause.onclick = () => {
+    paused = !paused;
+    pause.setAttribute('aria-pressed', String(paused));
+    pause.textContent = paused ? '繼續輪播' : '暫停輪播';
+    schedule();
+  };
+  music.onclick = () => setMusic(player.hidden);
+  live.onclick = () => {
+    livePaused = !livePaused;
+    live.setAttribute('aria-pressed', String(livePaused));
+    live.textContent = livePaused ? '恢復新投稿上屏' : '暫停新投稿上屏';
+    if (!livePaused) {
+      for (const [id, announced] of pending) {
+        if (!announced) floatNote();
+        pending.set(id, true);
+      }
+    }
+  };
+  $('#presentation-show-qr').onchange = event => { qr.hidden = !event.target.checked; };
+  qrSize.onchange = () => { root.dataset.qrSize = qrSize.value; };
+  qrSide.onchange = () => { root.dataset.qrSide = qrSide.value; };
+  document.addEventListener('visibilitychange', schedule);
+
+  function route(active) {
+    if (active === !root.hidden) return;
+    root.hidden = !active;
+    document.body.classList.toggle('presentation-active', active);
+    if (active) {
+      $('button#music-close').click();
+      $$('dialog[open]').forEach(dialog => dialog.close());
+      welcome();
+      $('.presentation-start', stage).focus({preventScroll: true});
+    } else {
+      if (document.fullscreenElement === root) void document.exitFullscreen().catch(() => {});
+      running = paused = false;
+      pause.setAttribute('aria-pressed', 'false');
+      pause.textContent = '暫停輪播';
+      pause.disabled = next.disabled = music.disabled = true;
+      controls.open = false;
+      current = null;
+      regular = [];
+      pending.clear();
+      notes.replaceChildren();
+      setMusic(false);
+      schedule();
+      $('#presentation-entry').focus({preventScroll: true});
+    }
+  }
+
+  return {route, sync};
+})();
 
 /* Local storage and integration with the supplied single-file design. */
 function newId(){return Date.now()*100+(storageState.sequence++%100)}
@@ -1136,7 +1662,7 @@ function openMem(id){ltId=id;storageState.attachment=0;storageState.albumIds=mem
 function step(direction){const list=storageState.albumIds.length?storageState.albumIds:MEM.map(m=>m.id);const index=list.indexOf(ltId);ltId=list[(index+direction+list.length)%list.length];storageState.attachment=0;drawLight()}
 
 function refreshConcerts(){renderStats();renderJ();$('#previewCards').innerHTML=CON.slice().sort((a,b)=>b.date.localeCompare(a.date)).slice(0,3).map(card).join('')}
-function route(){ProjectVideo.stop($('#jDetail'));const hash=location.hash.slice(1),journey=hash==='journey';$('#home').hidden=journey;$('#journey').hidden=!journey;$('#nav-home').setAttribute('aria-current',journey?'false':'page');$('#nav-journey').setAttribute('aria-current',journey?'page':'false');if(journey){renderStats();showList()}if(hash.startsWith('m-')){const id=Number(hash.slice(2));if(MEM.some(m=>m.id===id))openMem(id)}else if(lt.open)lt.close();if(!hash.startsWith('m-'))scrollTo({top:0,behavior:'instant'})}
+function route(){ProjectVideo.stop($('#jDetail'));const hash=location.hash.slice(1),journey=hash==='journey';$('#home').hidden=journey;$('#journey').hidden=!journey;ProjectPresentation.route(hash==='present');$('#nav-home').setAttribute('aria-current',journey?'false':'page');$('#nav-journey').setAttribute('aria-current',journey?'page':'false');if(journey){renderStats();showList()}if(hash.startsWith('m-')){const id=Number(hash.slice(2));if(MEM.some(m=>m.id===id))openMem(id)}else if(lt.open)lt.close();if(!hash.startsWith('m-'))scrollTo({top:0,behavior:'instant'});if(hash==='share-memory'){history.replaceState(history.state,'','#memories');open('upload')}}
 
 function fileType(file){if(file.type.startsWith('image/')||/\.(jpe?g|png|heic|heif|webp|gif)$/i.test(file.name))return 'photo';if(file.type.startsWith('video/')||/\.(mp4|mov|webm)$/i.test(file.name))return 'video';return null}
 async function compressImage(file){const url=objectURL(file);try{const image=await new Promise((resolve,reject)=>{const image=new Image();image.onload=()=>resolve(image);image.onerror=()=>reject(new Error('無法讀取「'+file.name+'」，請改用 JPG、PNG 或 WebP。'));image.src=url});const scale=Math.min(1,1600/Math.max(image.naturalWidth,image.naturalHeight));const w=Math.max(1,Math.round(image.naturalWidth*scale)),h=Math.max(1,Math.round(image.naturalHeight*scale));const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;const ctx=canvas.getContext('2d');if(!ctx)throw new Error('目前無法處理圖片。');ctx.fillStyle='#fff';ctx.fillRect(0,0,w,h);ctx.drawImage(image,0,0,w,h);const blob=await new Promise((resolve,reject)=>canvas.toBlob(blob=>blob?resolve(blob):reject(new Error('圖片處理失敗。')),'image/jpeg',.85));return {blob,w,h}}finally{releaseURL(url)}}
@@ -1221,18 +1747,36 @@ async function startHomepageCloud(){
  if(!ProjectCloud.enabled())return;
  const status=$('#cloud-sync-status');
  const sync=createAcceptanceSync({read:async()=>{
-  const previous=MEM.find(m=>m.id===ltId&&m.cloud);
-  await Promise.all([ProjectCloud.refresh(),...(typeof ProjectCatalog==='undefined'?[]:[ProjectCatalog.refresh()])]);
+  const previousMemories=new Map(MEM.filter(m=>m.cloud).map(m=>[m.id,m]));
+  const results=await Promise.allSettled([ProjectCloud.refresh(),...(typeof ProjectCatalog==='undefined'?[]:[ProjectCatalog.refresh()])]);
+  ProjectPresentation.sync(results[0].status==='fulfilled');
   storageState.albumIds=storageState.albumIds.filter(id=>MEM.some(m=>m.id===id));
-  if(previous&&lt.open){const current=MEM.find(m=>m.id===previous.id);if(!current){lt.close();toast('這則投稿已下架。')}else if(JSON.stringify(previous)!==JSON.stringify(current))drawLight()}
+  const previous=previousMemories.get(ltId);
+  if(previous&&lt.open){const current=MEM.find(m=>m.id===ltId);if(!current){lt.close();toast('這則投稿已下架。')}else if(JSON.stringify(previous)!==JSON.stringify(current))drawLight()}
+  const failed=results.find(result=>result.status==='rejected');if(failed)throw failed.reason;
  },notify:({state,lastSuccess})=>{
   const time=lastSuccess?new Date(lastSuccess).toLocaleTimeString('zh-TW'):'尚無';
-  status.textContent=state==='failed'?`暫時無法同步，畫面可能是舊資料。上次成功：${time}。`:state==='loading'?`正在同步親友投稿；上次成功：${time}。`:`親友投稿最後同步：${time}。按「重新讀取投稿」取得最新資料。`;
+  status.textContent=state==='failed'?`暫時無法同步，畫面可能是舊資料，稍後自動重試。上次成功：${time}。`:state==='loading'?`正在同步親友投稿；上次成功：${time}。`:`親友投稿最後同步：${time}。每 10 秒自動更新，也可按「重新讀取投稿」。`;
  }});
- $('#cloud-refresh').onclick=()=>void sync.refresh();
- addEventListener('pagehide',event=>{if(!event.persisted)sync.stop()});
- await sync.refresh();
- if(location.hash.startsWith('#m-'))route();
+ let timer,paused=false,initialMemoryHash=location.hash.startsWith('#m-')?location.hash:null;
+ function schedule(){clearTimeout(timer);if(!paused&&!document.hidden)timer=setTimeout(()=>void refresh(),10000)}
+ async function refresh(){
+  clearTimeout(timer);
+  if(paused||document.hidden)return;
+  try{
+   await sync.refresh();
+   if(initialMemoryHash){
+    if(location.hash!==initialMemoryHash)initialMemoryHash=null;
+    else if(!paused&&!document.hidden&&MEM.some(m=>m.id===Number(initialMemoryHash.slice(3)))){initialMemoryHash=null;if(!lt.open)route()}
+   }
+  }finally{schedule()}
+ }
+ $('#cloud-refresh').onclick=refresh;
+ document.addEventListener('visibilitychange',()=>{if(document.hidden)clearTimeout(timer);else void refresh()});
+ addEventListener('focus',()=>void refresh());
+ addEventListener('pagehide',event=>{paused=true;clearTimeout(timer);if(!event.persisted)sync.stop()});
+ addEventListener('pageshow',event=>{if(event.persisted){paused=false;void refresh()}});
+ await refresh();
 }
 
 if(ProjectCloud.enabled())storageState.readyPromise.finally(startHomepageCloud);

@@ -36,6 +36,26 @@ test('a late older catalog response cannot restore a deleted concert',async()=>{
  pending[0](Response.json({result:catalog}));await older;
  assert.equal(p.context.CON.some(c=>c.id===1),false);
 });
+
+test('late catalog responses cannot restore hidden supplements',async()=>{
+ const supplement={id:'a1',concertId:'1',name:'親友',body:{text:'補充',rows:[]}};
+ const pending=[],p=page(()=>new Promise(resolve=>pending.push(resolve)));
+ const older=p.context.catalogClient.refresh(),newer=p.context.catalogClient.refresh();
+ pending[1](Response.json({result:{...catalog,supplements:[]}}));await newer;
+ pending[0](Response.json({result:{...catalog,supplements:[supplement]}}));await older;
+ assert.equal(p.context.ProjectVisitor.supplementsFor(1).length,0);
+});
+
+test('a rejected catalog leaves previously validated supplements intact',async()=>{
+ const supplement={id:'a1',concertId:'1',name:'親友',body:{text:'已核對的回應',rows:[]}};
+ let result={...catalog,supplements:[supplement]};const p=page(async()=>Response.json({result}));
+ await p.context.catalogClient.refresh();
+ p.context.CLOUD_CONFIG.existingMemoriesEnabled=true;p.context.ARCHIVE.memoryIds=[1];
+ result={...result,supplements:[],memories:[],managedMemoryIds:[]};
+ await p.context.catalogClient.refresh();
+ assert.match(p.status.textContent,/可能是舊資料/);
+ assert.equal(p.context.ProjectVisitor.supplementsFor(1).length,1);
+});
 test('public supplements are validated, shown per concert and redraw a viewed concert only when they change',async()=>{
  const supplement={id:'a1',concertId:'1',name:'親友',body:{text:'補充',rows:[{zh:'曲名'}]},createdAt:'2026-11-05T00:00:00Z'};
  let result={...catalog,supplements:[supplement]};const p=page(async()=>Response.json({result}));
