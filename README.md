@@ -35,6 +35,8 @@ npm run serve
 
 開啟 http://localhost:8000 。字型、YouTube 與外部來源需要網路連線。
 
+本機預覽統一使用 `localhost`；若開啟 `127.0.0.1`，伺服器會保留路徑與查詢參數並自動轉址。實測 YouTube 可能拒絕來自數字 IP 的內嵌播放，同一份首頁在 `localhost` 可正常播放。
+
 也可使用 `npm start`。按 Ctrl+C 停止。若 8000 已被使用，PowerShell 可先執行 `$env:PORT=8001` 再啟動。此伺服器僅提供本機靜態預覽；來源修改後仍需 `npm run build`，再重新整理瀏覽器。
 
 ## 現場紀念展映
