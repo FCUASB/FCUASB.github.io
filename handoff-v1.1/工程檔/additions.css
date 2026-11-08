@@ -1,5 +1,15 @@
 /* The original layout/CSS is preserved. Only real media, source notes and forms gain styles. */
 body.modal-open{overflow:hidden}
+/* A separate film section below the original hero. */
+.memorial-video{background:var(--surface);border-bottom:1px solid var(--line)}
+.memorial-video .wrap{display:grid;justify-items:center}
+.memorial-video .sec-head{align-items:center;text-align:center}
+.memorial-video figure{width:min(900px,100%);min-width:0;margin:0 auto}
+#memorial-video-player{display:grid;place-items:center;width:100%}
+.memorial-video .video-start{aspect-ratio:16/9;border:1px solid var(--line);border-radius:2px}
+.memorial-video .video-start .video-cover{object-fit:cover}
+.memorial-video figcaption{text-align:center}
+.memorial-video figcaption a{display:inline-flex;align-items:center;min-height:44px}
 /* Keep the portrait's natural proportions as its responsive width changes. */
 .about figure #aboutImg{height:auto}
 .source-link{color:var(--muted);text-decoration:none;font-size:.72rem!important;opacity:.65;overflow-wrap:anywhere;transition:opacity .2s}

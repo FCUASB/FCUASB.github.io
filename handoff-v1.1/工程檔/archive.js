@@ -44,12 +44,23 @@ function renderJ(){
 function showSources(){const dialog=$('#dlg-sources');dialog.innerHTML=`<div class="dlg">${closeX}<h2>資料與影像來源</h2><p class="lead">更新於 ${esc(ARCHIVE.updated)}。公開演出紀錄由本網站整理，照片及影片權利歸原作者與相關單位所有。</p><div class="source-list">${[...new Set([...Object.values(ARCHIVE.sources),...CON.flatMap(c=>c.sources||[c.source]),...ARCHIVE.career.map(c=>c.source)].filter(Boolean))].map(url=>{const c=CON.find(x=>x.source===url),m=MEM.find(x=>x.source===url);return `<p>${sourceLink(url,c?c.sourceName+'｜'+c.title:m?m.sourceName:new URL(url).hostname)}</p>`}).join('')}</div><p class="hint">生平與演出紀錄可持續校訂；目前收錄範圍不代表老師完整演出總數。</p></div>`;dialog.showModal();syncModalState()}
 document.addEventListener('click',e=>{if(e.target.closest('[data-sources]'))showSources();const b=e.target.closest('[data-expand-memory]');if(b){const id=Number(b.dataset.expandMemory);expandedMemories.has(id)?expandedMemories.delete(id):expandedMemories.add(id);const m=MEM.find(m=>m.id===id),excerpt=memoryExcerpt(m);document.getElementById('memory-story-'+id).textContent=excerpt.text;b.textContent=excerpt.expanded?'收起文字':'閱讀剩下'+excerpt.remaining+'字';b.setAttribute('aria-expanded',String(excerpt.expanded))}});
 
+const memorialVideoCover=$('#memorial-video-player').innerHTML;
+function stopMemorialVideo(){
+ const mount=$('#memorial-video-player');
+ if(!mount.querySelector('iframe'))return;
+ ProjectVideo.stop(mount);mount.innerHTML=memorialVideoCover;
+}
+document.addEventListener('click',e=>{
+ const play=e.target.closest('[data-play-video]');
+ if(e.target.closest('[data-open],[data-mem],[data-con],#musicBtn')||(play&&!play.hasAttribute('data-memorial-video')))stopMemorialVideo();
+});
+
 function setupBackgroundMusic(){
  const button=$('#musicBtn'),panel=$('#background-music'),mount=$('#music-frame');
  const close=()=>{mount.replaceChildren();panel.hidden=true;button.textContent='♪ 播放音樂';button.setAttribute('aria-expanded','false')};
  button.textContent='♪ 播放音樂';button.disabled=false;button.title='Simple Gift: Here Take This Lovely Flower';button.onclick=()=>{if(!panel.hidden){close();return}panel.hidden=false;button.textContent='■ 關閉音樂';button.setAttribute('aria-expanded','true');if(location.protocol==='file:'){mount.innerHTML='<p class="music-local">請在 YouTube 播放這首音樂。</p>'}else mount.replaceChildren(createBackgroundMusicFrame())};
  $('#music-close').onclick=close;
- document.addEventListener('click',e=>{const b=e.target.closest('[data-mem]');if(b&&MEM.find(m=>m.id===Number(b.dataset.mem))?.type==='video')close();if(e.target.closest('[data-con]'))close()});
+ document.addEventListener('click',e=>{const b=e.target.closest('[data-mem]');if(b&&MEM.find(m=>m.id===Number(b.dataset.mem))?.type==='video')close();if(e.target.closest('[data-con],[data-play-video]'))close()});
 }
 
 function createBackgroundMusicFrame(){
